@@ -1314,6 +1314,109 @@ Deletes both the backup file and database record.
 
 ---
 
+## Cyber Threat Intelligence (CTI)
+
+The CTI service (port 8020) aggregates security findings from all scanners, normalizes them into indicators, and maps them to MITRE ATT&CK techniques. The backend proxies all `/cti/*` requests.
+
+### CTI Statistics & Data
+
+```
+GET /cti/stats
+GET /cti/timeline?days=7
+GET /cti/indicators
+GET /cti/attack-patterns
+GET /cti/nmap/results
+GET /cti/zap/results
+GET /cti/semgrep/results
+GET /cti/osv/results
+GET /cti/health
+Authorization: Bearer {token}
+```
+
+See Admin API Reference for detailed response formats.
+
+### Ingest Scanner Results
+
+```
+POST /cti/ingest/{source}
+Authorization: Bearer {token}
+Content-Type: application/json
+```
+
+Push scanner results directly into the CTI database. Source must be one of: `nmap`, `zap`, `semgrep`, `osv`.
+
+### CTI Stub Endpoints (Future Integration)
+
+```
+GET /cti/suricata/alerts
+GET /cti/wazuh/alerts
+GET /cti/malware
+Authorization: Bearer {token}
+```
+
+These endpoints exist but return empty data. They are reserved for future Suricata IDS, Wazuh SIEM, and CAPE sandbox integration.
+
+### CTI Background Jobs
+
+The CTI service runs three scheduled background jobs:
+
+| Job | Default Interval | Description |
+|-----|-----------------|-------------|
+| Scanner Connector Run | 1 hour | Polls all scanner APIs and ingests new findings |
+| MITRE ATT&CK Sync | 7 days | Syncs MITRE ATT&CK Enterprise techniques from GitHub |
+| CISA KEV Sync | 1 day | Syncs Known Exploited Vulnerabilities from CISA |
+
+---
+
+## Dark Web Intelligence
+
+The dark web scanner (port 8030) searches 23 dark web engines via Tor, categorizes findings, and generates PDF reports. All endpoints require authentication through the backend proxy.
+
+### Scan Operations
+
+```
+POST /dark-web/scan
+GET  /dark-web/scans
+GET  /dark-web/scan/json/{scan_id}
+GET  /dark-web/scan/{scan_id}
+GET  /dark-web/scan/{scan_id}/pdf
+GET  /dark-web/download/pdf/{scan_id}
+DELETE /dark-web/scan/{scan_id}
+Authorization: Bearer {token}
+```
+
+### Queue Management
+
+```
+GET /dark-web/queue/overview
+Authorization: Bearer {token}
+```
+
+### Worker & Engine Configuration (Admin)
+
+```
+GET /dark-web/settings/workers
+PUT /dark-web/settings/workers?max_workers=5
+GET /dark-web/settings/engines
+PUT /dark-web/settings/engines
+Authorization: Bearer {token}
+```
+
+See Admin API Reference for detailed request/response formats.
+
+### Available Dark Web Search Engines
+
+23 engines available including: ahmia, clone_systems_engine (default), phobos, tordex, tor66, tormax, haystack, torch, senator, demon, excavator, candle, and more. Configure via `PUT /dark-web/settings/engines`.
+
+### Dark Web Health
+
+```
+GET /dark-web/health
+Authorization: Bearer {token}
+```
+
+---
+
 ## Error Responses
 
 ### Standard Error Format

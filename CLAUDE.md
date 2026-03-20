@@ -12,15 +12,20 @@ CyberBridge is a cybersecurity compliance assessment platform with a microservic
 - **Frontend**: React + TypeScript + Vite + Ant Design, using Zustand for state management and Wouter for routing
 - **Backend**: FastAPI with SQLAlchemy ORM, PostgreSQL database
 - **Security Services**: Containerized microservices for vulnerability scanning
+- **CTI Service**: Cyber Threat Intelligence aggregation microservice with MITRE ATT&CK and CISA KEV feeds
+- **Dark Web Scanner**: Tor-based dark web intelligence gathering service with PDF report generation
 - **LLM Integration**: llama.cpp with phi-4 model for AI-powered analysis
 
 ### Directory Structure
 - `cyberbridge_frontend/` - React frontend application
 - `cyberbridge_backend/` - FastAPI backend with MVC architecture
 - `nmap/`, `zapproxy/`, `semgrep/`, `osvscanner/` - Security scanning microservices
+- `syft/` - SBOM generator microservice
 - `cti/service/` - CTI microservice (stores scanner results in PostgreSQL, serves aggregated threat intelligence)
-- `llm/` - LLM service container (llama.cpp)
+- `darkweb/` - Dark web scanner microservice (Tor-based search, PDF reports, PostgreSQL queue)
+- `llamacpp/` - LLM service container (llama.cpp)
 - `postgres/` - Database initialization scripts
+- `docs/` - Project documentation
 
 ### Backend Architecture
 The FastAPI backend follows MVC pattern:
@@ -73,17 +78,26 @@ docker-compose logs [service]      # View service logs
 - Nmap: 8011
 - OSV Scanner: 8012
 - Semgrep: 8013
+- Syft (SBOM): 8014
 - LLM (llama.cpp): 8015
 - CTI Service: 8020
+- Dark Web Scanner: 8030 (internal 8001)
 
 ## Key Features
-- User authentication and role-based access control
-- Framework-based compliance assessments
-- Risk and policy management
-- Product registration and tracking
-- Security scanning integration (OWASP ZAP, Nmap, Semgrep, OSV)
+- User authentication and role-based access control (JWT, SSO, magic links for auditors)
+- Framework-based compliance assessments (CRA, ISO 27001, NIS2, NIST, etc.)
+- Risk and policy management with compliance chain visualization
+- Asset registration and CE marking checklists
+- Controls management with library templates
+- Security scanning integration (OWASP ZAP, Nmap, Semgrep, OSV, Syft)
+- Cyber Threat Intelligence (CTI) dashboard with MITRE ATT&CK mapping
+- Dark web intelligence scanning with Tor-based search across 23 engines
+- Incident management with ENISA notification support
+- External audit engagements with magic link authentication
 - PDF export functionality
-- AI-powered analysis with llama.cpp/phi-4
+- AI-powered analysis (llama.cpp, OpenAI, Anthropic, Google, X AI, QLON)
+- EU Vulnerability Database (EUVD) and NVD synchronization
+- Automated backup and restore system
 
 ## Database
 PostgreSQL with UUID primary keys, role-based user system, and comprehensive audit trailing. Database automatically seeds on startup with default roles, organizations, and lookup data.
@@ -169,6 +183,19 @@ PostgreSQL with UUID primary keys, role-based user system, and comprehensive aud
 - Risk belongs to one RiskSeverity (as risk_severity_id)
 - RiskStatus has many Risk
 - Risk belongs to one RiskStatus
+
+**CTI (Cyber Threat Intelligence):**
+- CtiIndicator stores normalized findings from all scanners (name, source, confidence, severity, CWE, port, URL, etc.)
+- CtiAttackPattern stores MITRE ATT&CK techniques (mitre_id, name, tactic, URL)
+- CtiIndicatorAttackPattern junction table links indicators to attack patterns
+- CtiSighting records when/where indicators were observed
+- CtiMalware stores malware family information
+- CtiKevEntry stores CISA Known Exploited Vulnerabilities (cve_id, vendor, product, due_date)
+- CtiThreatFeed tracks feed sync status (mitre_attack, cisa_kev)
+
+**Dark Web Intelligence:**
+- DarkwebScan tracks scan jobs (keyword, status, engines, params, result with base64 PDF, timestamps)
+- DarkwebSettings stores per-org configuration (max_workers 1-10, enabled_engines list)
 
 ## Testing
 Test files are present in both frontend and backend directories. Run tests using standard frameworks for each technology stack.

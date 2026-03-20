@@ -2063,6 +2063,198 @@ Authorization: Bearer {token}
 
 ---
 
+## Cyber Threat Intelligence (CTI)
+
+All CTI endpoints are proxied through the backend to the CTI microservice (port 8020).
+
+### Get CTI Statistics
+
+```
+GET /cti/stats
+Authorization: Bearer {token}
+```
+
+Returns aggregated indicator and sighting counts by source (suricata, wazuh, cape) plus totals including malware families and attack patterns.
+
+### Get CTI Timeline
+
+```
+GET /cti/timeline?days=7
+Authorization: Bearer {token}
+```
+
+Returns daily detection buckets over the specified number of days.
+
+### Get CTI Indicators
+
+```
+GET /cti/indicators
+Authorization: Bearer {token}
+```
+
+Returns recent indicators with id, name, confidence, source, labels, and created timestamp.
+
+### Get Attack Patterns
+
+```
+GET /cti/attack-patterns
+Authorization: Bearer {token}
+```
+
+Returns MITRE ATT&CK techniques with indicator counts and source attribution.
+
+### Get Scanner CTI Results
+
+```
+GET /cti/nmap/results
+GET /cti/zap/results
+GET /cti/semgrep/results
+GET /cti/osv/results
+Authorization: Bearer {token}
+```
+
+Returns aggregated scanner findings. Each endpoint provides totals, category breakdowns, and recent items (max 50).
+
+**Nmap Response:** Totals, open ports by count, services, protocols, hosts with discovered ports.
+
+**ZAP Response:** Totals, risk distribution (High/Medium/Low/Info), CWE breakdown, top vulnerabilities.
+
+**Semgrep Response:** Totals, severity distribution (ERROR/WARNING/INFO), OWASP categories, check IDs.
+
+**OSV Response:** Totals, severity distribution (Critical/High/Medium/Low), ecosystems, top vulnerable packages.
+
+### Ingest Scanner Results (Push)
+
+```
+POST /cti/ingest/{source}
+Authorization: Bearer {token}
+Content-Type: application/json
+```
+
+**Path Parameters:**
+- `source`: One of `nmap`, `zap`, `semgrep`, `osv`
+
+**Request Body:** Array of scanner result items (format varies by source).
+
+**Response:**
+```json
+{
+  "ingested": 15
+}
+```
+
+### Get CTI Health
+
+```
+GET /cti/health
+Authorization: Bearer {token}
+```
+
+---
+
+## Dark Web Intelligence
+
+### Create Dark Web Scan
+
+```
+POST /dark-web/scan
+Authorization: Bearer {token}
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "keyword": "company-name",
+  "mp_units": 2,
+  "limit": 3
+}
+```
+
+### List Dark Web Scans
+
+```
+GET /dark-web/scans
+Authorization: Bearer {token}
+```
+
+### Get Scan Result (JSON)
+
+```
+GET /dark-web/scan/json/{scan_id}
+Authorization: Bearer {token}
+```
+
+### Download Scan PDF
+
+```
+GET /dark-web/download/pdf/{scan_id}
+Authorization: Bearer {token}
+```
+
+### Delete Scan
+
+```
+DELETE /dark-web/scan/{scan_id}
+Authorization: Bearer {token}
+```
+
+### Get Queue Overview
+
+```
+GET /dark-web/queue/overview
+Authorization: Bearer {token}
+```
+
+### Get Worker Settings
+
+```
+GET /dark-web/settings/workers
+Authorization: Bearer {token}
+```
+
+### Update Worker Settings
+
+```
+PUT /dark-web/settings/workers?max_workers=5
+Authorization: Bearer {token}
+```
+
+Updates the maximum number of concurrent dark web scan workers (1-10).
+
+### Get Available Engines
+
+```
+GET /dark-web/settings/engines
+Authorization: Bearer {token}
+```
+
+Returns all 23 available dark web search engines with their enabled/disabled status.
+
+### Update Enabled Engines
+
+```
+PUT /dark-web/settings/engines
+Authorization: Bearer {token}
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "enabled_engines": ["ahmia", "phobos", "torch", "haystack"]
+}
+```
+
+### Dark Web Health
+
+```
+GET /dark-web/health
+Authorization: Bearer {token}
+```
+
+---
+
 ## Error Responses
 
 ### Standard Error Format

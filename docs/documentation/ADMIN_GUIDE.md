@@ -417,6 +417,87 @@ Access security scanning tools (if enabled for your organization).
 - Export scan results for compliance documentation
 - Clear historical scan data as needed
 
+## Cyber Threat Intelligence (CTI)
+
+Monitor your organization's threat landscape through a unified intelligence dashboard.
+
+### CTI Overview
+
+1. Navigate to **Threat Intelligence > Overview**
+2. View aggregated statistics across all scanner sources
+3. Monitor key metrics: Total Indicators, Sightings, Malware Families, Attack Patterns
+4. Review the Threat Timeline showing detection trends over 7, 14, or 30 days
+5. See source breakdown cards for Suricata IDS, Wazuh SIEM, and CAPE sandbox
+
+### MITRE ATT&CK View
+
+1. Navigate to **Threat Intelligence > MITRE ATT&CK**
+2. View the top detected MITRE ATT&CK techniques in a bar chart
+3. See source distribution in a pie chart
+4. Review recent indicators with confidence scores
+5. Browse recent attack patterns with MITRE IDs and detection dates
+
+### Scanner-Specific CTI Views
+
+Navigate to the scanner-specific pages for detailed breakdowns:
+
+- **Network** (`/cti/network`): Nmap findings by host, port, and service
+- **Web Vulnerabilities** (`/cti/web-vulns`): ZAP findings by risk level and CWE
+- **Code Analysis** (`/cti/code-analysis`): Semgrep findings by severity and OWASP category
+- **Dependencies** (`/cti/dependencies`): OSV findings by CVE severity, ecosystem, and package
+
+### How CTI Data Flows
+
+Scanner services (ZAP, Nmap, Semgrep, OSV) are polled periodically by the CTI microservice. Findings are normalized into a common indicator model, deduplicated using deterministic UUIDs, and mapped to MITRE ATT&CK techniques where applicable. MITRE ATT&CK and CISA KEV feeds are synced on schedule.
+
+## Dark Web Intelligence
+
+Search the dark web for leaked credentials, exposed data, and other threats related to your organization.
+
+### Dark Web Dashboard
+
+1. Navigate to **Dark Web Intelligence > Dashboard**
+2. View real-time KPIs: Queue Length, Currently Processing, Active Workers, Total Scans
+3. See recent scan activity in a quick-view table
+4. Use quick action buttons to start new scans, view all scans, or access reports
+
+### Running a Dark Web Scan
+
+1. Navigate to **Dark Web Intelligence > Scans**
+2. Click "New Scan"
+3. Enter a search keyword (e.g., company name, domain, email pattern)
+4. The scan is queued and processed asynchronously via Tor
+5. Monitor progress with auto-refreshing status (every 5 seconds)
+6. Scans search across up to 23 dark web engines
+
+### Reviewing Scan Results
+
+1. Click on a completed scan to view details
+2. Review the scan summary: Sites Found, Keywords Matched, Critical Threats
+3. Browse findings organized by category tabs:
+   - **Passwords**: Password-related findings
+   - **Databases**: Database exposure findings
+   - **Credentials**: Credential leak findings
+   - **Emails**: Email address exposure
+   - **Leaks**: General data leak findings
+4. Each finding shows: URL, categories, keyword occurrences, severity score (0-100)
+5. Expand rows to see context snippets with keyword highlighting
+
+### Dark Web Reports
+
+1. Navigate to **Dark Web Intelligence > Reports**
+2. View all completed scans as report cards
+3. Each card shows: Keyword, Breach/Secure status, Duration, Completion time
+4. Download reports in PDF or JSON format
+
+### Dark Web Settings (Admin Only)
+
+1. Navigate to **Dark Web Intelligence > Settings**
+2. **Worker Configuration**: Adjust concurrent scan workers (1-10) using the slider
+3. **Search Engine Configuration**: Toggle individual dark web engines on/off
+4. At least one engine must remain enabled
+5. Settings are saved per organization
+
 ## Audit Engagements
 
 Manage external audit workflows.
@@ -571,6 +652,20 @@ CyberBridge provides two public assessment tools accessible from the login page 
 3. Maintain scan history for audit purposes
 4. Link scan findings to risks in the Risk Register
 
+### Threat Intelligence
+
+1. Review the CTI dashboard regularly for new indicators
+2. Monitor MITRE ATT&CK technique trends for emerging threats
+3. Use scanner-specific CTI views to track vulnerability remediation progress
+4. Review CISA KEV entries for known exploited vulnerabilities
+
+### Dark Web Monitoring
+
+1. Schedule regular dark web scans for company name, domains, and key personnel
+2. Review findings promptly and escalate credential leaks immediately
+3. Use PDF reports for executive briefings on dark web exposure
+4. Adjust worker count and enabled engines based on scan performance
+
 ### Compliance Chain
 
 1. Regularly review the Compliance Chain Map for gaps
@@ -606,6 +701,18 @@ CyberBridge provides two public assessment tools accessible from the login page 
 - Verify auditor email is correct
 - Check IP allowlisting configuration
 - Ensure magic link hasn't expired
+
+**CTI dashboard shows no data:**
+- Verify the CTI service is running (port 8020)
+- Check that scanner services are running and have produced results
+- Wait for the next scheduled connector run (default: every 1 hour)
+- Check CTI service logs for connector errors
+
+**Dark web scan stuck in processing:**
+- Check the dark web scanner service health (port 8030)
+- Verify Tor connectivity within the container
+- Review queue overview for worker status
+- Scans stuck in processing for >30 minutes are auto-recovered on service restart
 
 ## Getting Support
 

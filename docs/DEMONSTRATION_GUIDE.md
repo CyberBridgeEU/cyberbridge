@@ -9,7 +9,7 @@
 
 ---
 
-## 📋 Demonstration Flow (30-45 minutes)
+## 📋 Demonstration Flow (45-60 minutes)
 
 ### **Phase 1: System Overview & User Management** (5 minutes)
 
@@ -225,9 +225,75 @@
 
 ---
 
-### **Phase 8: Reporting & Documentation** (5 minutes)
+### **Phase 8: Cyber Threat Intelligence (CTI)** (5-7 minutes)
 
-#### 8.1 Generate Assessment Report
+#### 8.1 CTI Overview Dashboard
+- Navigate to **Threat Intelligence > Overview**
+- **Show key metrics:**
+  - Total Indicators (across all scanner sources)
+  - Total Sightings (network & endpoint detections)
+  - Malware Families (from CAPE sandbox)
+  - Attack Patterns (MITRE ATT&CK techniques)
+- **Demonstrate:**
+  - Source breakdown cards (Suricata IDS, Wazuh SIEM, CAPE Malware Sandbox)
+  - Threat Timeline chart showing detections over 7/14/30 days
+  - Top MITRE ATT&CK Techniques bar chart
+
+#### 8.2 MITRE ATT&CK Indicators
+- Navigate to **Threat Intelligence > MITRE ATT&CK**
+- **Show:**
+  - Top MITRE ATT&CK techniques bar chart
+  - Patterns by source (pie chart)
+  - Recent Indicators table with confidence scores
+  - Recent Attack Patterns table with MITRE IDs
+
+#### 8.3 Scanner-Specific Views
+- Navigate through the scanner CTI pages:
+  - **Network**: Nmap findings aggregated by port, service, host
+  - **Web Vulnerabilities**: ZAP findings by risk level and CWE
+  - **Code Analysis**: Semgrep findings by severity and OWASP category
+  - **Dependencies**: OSV findings by CVE severity and ecosystem
+- **Explain:** How scanner results are normalized, deduplicated, and mapped to MITRE ATT&CK
+
+---
+
+### **Phase 9: Dark Web Intelligence** (5-7 minutes)
+
+#### 9.1 Dark Web Dashboard
+- Navigate to **Dark Web Intelligence > Dashboard**
+- **Show dashboard KPIs:**
+  - Queue Length, Currently Processing, Active Workers, Total Scans
+  - Recent scan activity table
+  - Quick action buttons
+
+#### 9.2 Run a Dark Web Scan
+- Navigate to **Dark Web Intelligence > Scans**
+- **Action:** Create a new scan
+  - Enter keyword: "TechSecure" or company domain
+  - Show scan being queued and processing in real-time
+  - Explain Tor-based anonymized searching across 23 dark web engines
+
+#### 9.3 Review Scan Results
+- Open a completed scan result
+- **Show:**
+  - Findings categorized by type: passwords, databases, credentials, emails, leaks
+  - Severity scoring for each finding (0-100 scale)
+  - Context snippets with keyword highlighting
+  - Expandable rows showing detailed finding information
+  - Download PDF threat intelligence report
+
+#### 9.4 Dark Web Settings (Admin)
+- Navigate to **Dark Web Intelligence > Settings**
+- **Show configuration options:**
+  - Worker count slider (1-10 concurrent scans)
+  - Search engine toggle switches (23 available engines)
+  - Explain how settings are persisted per organization
+
+---
+
+### **Phase 10: Reporting & Documentation** (5 minutes)
+
+#### 10.1 Generate Assessment Report
 - Navigate to current assessment → **Export PDF**
 - **Show comprehensive report including:**
   - Executive summary
@@ -238,7 +304,7 @@
   - Gap analysis
   - Remediation recommendations
 
-#### 8.2 Audit Trail
+#### 10.2 Audit Trail
 - Navigate to **History** → **Audit Logs**
 - **Demonstrate compliance audit trail:**
   - Who made changes
@@ -250,9 +316,9 @@
 
 ---
 
-### **Phase 9: Dashboard & Analytics** (3 minutes)
+### **Phase 11: Dashboard & Analytics** (3 minutes)
 
-#### 9.1 Compliance Dashboard
+#### 11.1 Compliance Dashboard
 - Navigate to **Home/Dashboard**
 - **Show key metrics:**
   - Overall compliance percentage
@@ -261,44 +327,44 @@
   - Pending policy approvals
   - Recent activities
 
-#### 9.2 Real-time Collaboration
+#### 11.2 Real-time Collaboration
 - Show **User Sessions** tracking
 - Demonstrate activity monitoring
 - Show who's currently working on assessments
 
 ---
 
-### **Phase 10: Advanced Features Demo** (Optional - 5 minutes)
+### **Phase 12: Advanced Features Demo** (Optional - 5 minutes)
 
-#### 10.1 LLM Integration
+#### 12.1 LLM Integration
 - Navigate to **Admin Panel** → **LLM Settings**
 - Show multi-provider LLM configuration (llama.cpp, OpenAI, Anthropic, Google, X AI, QLON)
 - Demonstrate AI-powered question suggestions
 - Show confidence threshold settings
 
-#### 10.2 Framework Updates
+#### 12.2 Framework Updates
 - Navigate to **Admin Panel** → **Framework Updates**
 - Show version control for frameworks
 - Demonstrate how framework updates are tracked
 - Show update application workflow
 
-#### 10.3 Email Verification & Notifications
+#### 12.3 Email Verification & Notifications
 - Show SMTP configuration
 - Demonstrate email verification flow for new users
 - Show password reset functionality
 
-#### 10.4 Single Sign-On (SSO)
+#### 12.4 Single Sign-On (SSO)
 - Navigate to **Settings** → **SSO Configuration**
 - Show Google and Microsoft OAuth2 integration
 - Demonstrate SSO login flow
 
-#### 10.5 External Audit Portal
+#### 12.5 External Audit Portal
 - Navigate to **Audit Engagements** → Create New Engagement
 - Show how to invite external auditors with magic link
 - Demonstrate the separate auditor review workspace
 - Show audit findings and sign-off workflow
 
-#### 10.6 Incident Management
+#### 12.6 Incident Management
 - Navigate to **Risks** → **Incidents**
 - Show incident registration and tracking
 - Link incidents to assets and risks
@@ -365,6 +431,9 @@ Before the presentation, ensure:
 - [ ] SSO configuration is set up (if demonstrating SSO)
 - [ ] At least 1 control is pre-populated
 - [ ] Syft scanner service is running
+- [ ] CTI service is running and has ingested scanner data
+- [ ] Dark web scanner service is running with Tor connectivity
+- [ ] At least 1 completed dark web scan exists for demo
 
 ---
 
@@ -384,6 +453,8 @@ Before the presentation, ensure:
 12. **Controls Management:** Control register and compliance chain visualization
 13. **Incident Tracking:** Incident registration and management linked to assets and risks
 14. **SBOM Generation:** Software Bill of Materials generation with Syft
+15. **Cyber Threat Intelligence:** Unified CTI dashboard aggregating findings from all scanners with MITRE ATT&CK mapping
+16. **Dark Web Monitoring:** Tor-based dark web scanning across 23 search engines with automated PDF reports and finding categorization
 
 ---
 

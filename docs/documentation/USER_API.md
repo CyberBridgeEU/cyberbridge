@@ -343,6 +343,156 @@ data: [DONE]
 
 ---
 
+## Cyber Threat Intelligence (CTI)
+
+### Get CTI Statistics
+
+```
+GET /cti/stats
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "suricata": {"indicators": 0, "sightings": 0},
+  "wazuh": {"indicators": 0, "sightings": 0},
+  "cape": {"indicators": 0, "sightings": 0},
+  "totals": {"indicators": 150, "sightings": 0, "malware_families": 0, "attack_patterns": 25}
+}
+```
+
+### Get CTI Timeline
+
+```
+GET /cti/timeline?days=7
+Authorization: Bearer {token}
+```
+
+Returns daily detection counts by source over the specified number of days.
+
+### Get CTI Indicators
+
+```
+GET /cti/indicators
+Authorization: Bearer {token}
+```
+
+Returns recent indicators with metadata (name, confidence, source, labels, created timestamp).
+
+### Get Attack Patterns
+
+```
+GET /cti/attack-patterns
+Authorization: Bearer {token}
+```
+
+Returns MITRE ATT&CK techniques with counts and source attribution.
+
+### Get Scanner CTI Results
+
+```
+GET /cti/nmap/results
+GET /cti/zap/results
+GET /cti/semgrep/results
+GET /cti/osv/results
+Authorization: Bearer {token}
+```
+
+Returns aggregated scanner findings normalized into the CTI data model. Each endpoint returns totals, breakdowns by category (risk, severity, CWE, OWASP, ecosystem), and recent findings.
+
+### Get CTI Health
+
+```
+GET /cti/health
+Authorization: Bearer {token}
+```
+
+---
+
+## Dark Web Intelligence
+
+### Create Dark Web Scan
+
+```
+POST /dark-web/scan
+Authorization: Bearer {token}
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "keyword": "company-name",
+  "mp_units": 2,
+  "limit": 3
+}
+```
+
+**Response:**
+```json
+{
+  "scan_id": "uuid",
+  "status": "queued",
+  "queue_position": 1,
+  "estimated_wait_minutes": 2
+}
+```
+
+### List Dark Web Scans
+
+```
+GET /dark-web/scans
+Authorization: Bearer {token}
+```
+
+Returns all scans for the current user with status, timestamps, and metadata.
+
+### Get Scan Result
+
+```
+GET /dark-web/scan/json/{scan_id}
+Authorization: Bearer {token}
+```
+
+Returns detailed scan results including findings, summary, categorized findings, and engine status.
+
+### Download Scan PDF Report
+
+```
+GET /dark-web/download/pdf/{scan_id}
+Authorization: Bearer {token}
+```
+
+Downloads the generated PDF threat intelligence report for a completed scan.
+
+### Delete Scan
+
+```
+DELETE /dark-web/scan/{scan_id}
+Authorization: Bearer {token}
+```
+
+### Get Queue Overview
+
+```
+GET /dark-web/queue/overview
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "queue_length": 2,
+  "processing_count": 1,
+  "active_workers": 3,
+  "max_workers": 3,
+  "currently_processing": ["scan_id_1"]
+}
+```
+
+---
+
 ## Error Responses
 
 All endpoints may return error responses:

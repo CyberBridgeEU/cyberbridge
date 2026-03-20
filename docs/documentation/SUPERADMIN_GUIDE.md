@@ -439,6 +439,104 @@ Control access to CRA-specific documentation pages per organization.
 2. Manage evidence items with integrity verification
 3. Link evidence to frameworks and controls
 
+## Cyber Threat Intelligence (CTI)
+
+System-wide threat intelligence aggregation and monitoring.
+
+### CTI Dashboard
+
+1. Navigate to **Threat Intelligence > Overview**
+2. View aggregated threat statistics across all scanner sources
+3. Monitor: Total Indicators, Sightings, Malware Families, MITRE ATT&CK Patterns
+4. Threat Timeline showing detection trends over configurable time periods
+5. Source breakdown cards for Suricata IDS, Wazuh SIEM, and CAPE sandbox
+
+### MITRE ATT&CK View
+
+1. Navigate to **Threat Intelligence > MITRE ATT&CK**
+2. Top detected techniques ranked by frequency
+3. Source distribution pie chart across all integrations
+4. Recent indicators with confidence scores and labels
+5. Recent attack patterns with MITRE IDs
+
+### Scanner CTI Views
+
+Navigate to scanner-specific pages for detailed breakdowns:
+
+- **Network** (`/cti/network`): Nmap findings by host, port, service
+- **Web Vulnerabilities** (`/cti/web-vulns`): ZAP findings by risk and CWE
+- **Code Analysis** (`/cti/code-analysis`): Semgrep findings by severity and OWASP
+- **Dependencies** (`/cti/dependencies`): OSV findings by CVE severity and ecosystem
+
+### CTI Service Administration
+
+The CTI microservice runs independently on port 8020 with three background jobs:
+
+| Job | Interval | Purpose |
+|-----|----------|---------|
+| Scanner Connector Run | 1 hour | Polls scanner APIs and ingests findings |
+| MITRE ATT&CK Sync | 7 days | Syncs enterprise techniques from MITRE GitHub |
+| CISA KEV Sync | 1 day | Syncs Known Exploited Vulnerabilities from CISA |
+
+Configuration is done via environment variables:
+- `SCANNER_POLL_INTERVAL`: Scanner polling interval in seconds (default 3600)
+- `MITRE_SYNC_INTERVAL`: MITRE sync interval in seconds (default 604800)
+- `KEV_SYNC_INTERVAL`: KEV sync interval in seconds (default 86400)
+- `NMAP_TARGETS`, `ZAP_TARGETS`: Comma-separated scan targets
+
+## Dark Web Intelligence
+
+System-wide dark web monitoring with Tor-based search capabilities.
+
+### Dark Web Dashboard
+
+1. Navigate to **Dark Web Intelligence > Dashboard**
+2. View real-time KPIs: Queue Length, Processing Count, Active Workers, Total Scans
+3. Recent scan activity table with status tracking
+4. Quick action panel for common operations
+
+### Running Dark Web Scans
+
+1. Navigate to **Dark Web Intelligence > Scans**
+2. Create scans with keywords to search across 23 dark web engines
+3. Scans are queued and processed asynchronously via Tor proxy
+4. Monitor progress with auto-refreshing status updates
+5. View, download, or delete completed scans
+
+### Dark Web Scan Results
+
+Completed scans include:
+- Findings categorized by type: passwords, databases, credentials, emails, leaks
+- Severity scoring (0-100) based on category weights and occurrence density
+- Context snippets with keyword highlighting
+- PDF threat intelligence reports with charts and detailed findings
+
+### Dark Web Reports
+
+1. Navigate to **Dark Web Intelligence > Reports**
+2. View all completed scans as report cards with Breach/Secure status
+3. Download reports in PDF or JSON format
+4. Search and filter by keyword
+
+### Dark Web Settings (Admin)
+
+1. Navigate to **Dark Web Intelligence > Settings**
+2. **Worker Configuration**: Slider to set max concurrent scans (1-10)
+3. **Search Engine Configuration**: Toggle 23 available dark web engines on/off
+4. Settings are persisted per organization in PostgreSQL
+
+### Dark Web Service Administration
+
+The dark web scanner runs independently on port 8030 (internal 8001) with:
+- Built-in Tor daemon for SOCKS5 proxy (port 9050)
+- PostgreSQL-based job queue with `FOR UPDATE SKIP LOCKED` atomicity
+- Automatic recovery of orphaned scans on service restart
+- Configurable worker pool (1-10 threads)
+
+Environment variables:
+- `DATABASE_URL`: PostgreSQL connection string
+- `MAX_SCAN_WORKERS`: Initial worker count (default 3)
+
 ## Security Tools
 
 Full access to all security scanning tools:
@@ -543,6 +641,39 @@ Full access to all security scanning tools:
 - Check token expiration settings
 - Review authentication logs
 
+### CTI Issues
+
+**CTI dashboard shows no data:**
+- Verify the CTI service container is running: `docker logs cyberbridge_cti_service`
+- Check that scanner services are running and producing results
+- Verify `NMAP_TARGETS` and `ZAP_TARGETS` environment variables are set correctly
+- Wait for the next scheduled connector run (default: every 1 hour)
+- Trigger a manual connector run if needed via the ingest endpoint
+
+**MITRE ATT&CK techniques not appearing:**
+- Check MITRE sync job status in CTI service logs
+- Verify internet connectivity from the CTI container (needs access to raw.githubusercontent.com)
+- Manual sync occurs 10 seconds after service startup
+
+### Dark Web Issues
+
+**Dark web scans fail immediately:**
+- Verify the dark web scanner container is running: `docker logs cyberbridge_darkweb_scanner`
+- Check Tor daemon status inside the container
+- Verify PostgreSQL connectivity from the dark web service
+- Review error messages in the scan result
+
+**Dark web scans stuck in processing:**
+- Check queue overview for worker status
+- Scans stuck >30 minutes are auto-recovered on service restart
+- Restart the dark web scanner service to trigger recovery
+- Verify Tor SOCKS5 proxy is accessible at port 9050 inside the container
+
+**No engines available:**
+- Check engine configuration via `GET /dark-web/settings/engines`
+- Ensure at least one engine is enabled
+- Dark web engines may be temporarily offline; check `engine_status` in scan results
+
 ### Scanner Issues
 
 **Scanners not visible to organization:**
@@ -625,6 +756,9 @@ For issues requiring additional support:
 | CRA Technical File | CRA Mode | CRA Mode | CRA Mode |
 | CRA Public Assessments | Public | Public | Public |
 | Correlations | No | Yes | Yes |
+| CTI Dashboard | Yes | Yes | Yes |
+| Dark Web Scans | Yes | Yes | Yes |
+| Dark Web Settings | No | Admin | Admin |
 
 ### System Architecture
 
@@ -634,6 +768,8 @@ The CyberBridge platform consists of:
 - **Backend API**: FastAPI (Port 8000)
 - **Database**: PostgreSQL (Port 5433)
 - **Security Services**: ZAP (8010), Nmap (8011), OSV (8012), Semgrep (8013), Syft (8014)
+- **CTI Service**: Threat Intelligence aggregation (Port 8020)
+- **Dark Web Scanner**: Tor-based dark web search (Port 8030)
 - **LLM Service**: Configurable (llama.cpp, OpenAI, Anthropic, Google, X AI, QLON)
 
 ---
