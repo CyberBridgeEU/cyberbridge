@@ -167,9 +167,9 @@ const CyberBridgeTourPanel: React.FC = () => {
                         icon={<CompassOutlined />}
                         title="Interactive Tour"
                         description="Guided walkthrough of the platform"
-                        gradient="linear-gradient(145deg, #0e7490, #0c5f75, #0a4f63)"
-                        hoverGradient="linear-gradient(145deg, #0c5f75, #0a4f63, #083f50)"
-                        shadowColor="rgba(6, 130, 160,"
+                        gradient="linear-gradient(145deg, #1a3d5c, #162d4d, #0f2240)"
+                        hoverGradient="linear-gradient(145deg, #1f4a6e, #1a3d5c, #162d4d)"
+                        shadowColor="rgba(26, 61, 92,"
                         onClick={startQuickStartTour}
                         badge="New"
                     />
@@ -177,9 +177,9 @@ const CyberBridgeTourPanel: React.FC = () => {
                         icon={<BookOutlined />}
                         title="User Guide"
                         description="Step-by-step compliance workflow"
-                        gradient="linear-gradient(145deg, #4338ca, #5b21b6, #6d28d9)"
-                        hoverGradient="linear-gradient(145deg, #3730a3, #4c1d95, #5b21b6)"
-                        shadowColor="rgba(67, 56, 202,"
+                        gradient="linear-gradient(145deg, #2a2d52, #1f2145, #161838)"
+                        hoverGradient="linear-gradient(145deg, #333664, #2a2d52, #1f2145)"
+                        shadowColor="rgba(42, 45, 82,"
                         onClick={() => setGuideOpen(true)}
                         badge="New"
                     />
@@ -187,18 +187,18 @@ const CyberBridgeTourPanel: React.FC = () => {
                         icon={<ThunderboltOutlined />}
                         title="Quick Start Example"
                         description="See a full compliance flow in action"
-                        gradient="linear-gradient(145deg, #b45309, #c2410c, #b91c1c)"
-                        hoverGradient="linear-gradient(145deg, #92400e, #9a3412, #991b1b)"
-                        shadowColor="rgba(180, 83, 9,"
+                        gradient="linear-gradient(145deg, #3d2c1a, #2e2015, #221810)"
+                        hoverGradient="linear-gradient(145deg, #4a3520, #3d2c1a, #2e2015)"
+                        shadowColor="rgba(61, 44, 26,"
                         onClick={() => setLocation('/documentation?doc=quick_start_example')}
                     />
                     <TourCard
                         icon={<SafetyCertificateOutlined />}
                         title="CRA Start Example"
                         description="CRA compliance for a SIEM with AI"
-                        gradient="linear-gradient(145deg, #047857, #065f46, #064e3b)"
-                        hoverGradient="linear-gradient(145deg, #065f46, #064e3b, #053f30)"
-                        shadowColor="rgba(4, 120, 87,"
+                        gradient="linear-gradient(145deg, #1a3d3a, #152e2c, #0f2220)"
+                        hoverGradient="linear-gradient(145deg, #1f4a46, #1a3d3a, #152e2c)"
+                        shadowColor="rgba(26, 61, 58,"
                         onClick={() => setLocation('/documentation?doc=cra_start_example')}
                         badge="New"
                     />
