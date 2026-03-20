@@ -1,0 +1,254 @@
+================================================================================
+              JWT & API KEY AUTHENTICATION - GLOBAL MIDDLEWARE
+================================================================================
+
+ARCHITECTURE
+------------
+This application uses GLOBAL MIDDLEWARE AUTHENTICATION (enterprise pattern):
+
+1. Middleware runs on ALL routes automatically
+2. Checks authentication in order:
+   - JWT Bearer token? → Accept, mark as principal.type = "user"
+   - API Key header?   → Accept, mark as principal.type = "service"
+   - Neither?          → Reject with 401
+
+3. Sets request.state.principal with authentication info
+4. Your endpoints access the principal to know who/what made the request
+
+OVERVIEW
+--------
+Two authentication methods with principal type tracking:
+
+1. JWT Tokens (principal.type = "user")
+   - For: Web UI, human users, interactive sessions
+   - Expires: 15 minutes (access), 7 days (refresh)
+   - Automatic token refresh on frontend
+   - Tracking: Logged as user actions
+
+2. API Keys (principal.type = "service")
+   - For: Automation, scripts, CI/CD, integrations
+   - Expires: Custom (or never expire)
+   - No need to refresh
+   - Tracking: Logged as service/automated actions
+
+
+CONFIGURING JWT EXPIRATION
+---------------------------
+
+File: backend/app/core/config.py
+
+class Settings(BaseSettings):
+    # Security - JWT Configuration
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15  # ← Change this
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7     # ← Change this
+
+Environment Variables (optional):
+    export ACCESS_TOKEN_EXPIRE_MINUTES=30   # 30 minutes
+    export REFRESH_TOKEN_EXPIRE_DAYS=14     # 14 days
+
+
+RECOMMENDED CONFIGURATIONS
+--------------------------
+
+Development:
+    ACCESS_TOKEN_EXPIRE_MINUTES = 60  # 1 hour
+    REFRESH_TOKEN_EXPIRE_DAYS = 30    # 1 month
+
+Production (High Security):
+    ACCESS_TOKEN_EXPIRE_MINUTES = 15  # 15 minutes
+    REFRESH_TOKEN_EXPIRE_DAYS = 7     # 1 week
+
+Production (Balanced):
+    ACCESS_TOKEN_EXPIRE_MINUTES = 30  # 30 minutes
+    REFRESH_TOKEN_EXPIRE_DAYS = 14    # 2 weeks
+
+
+AUTHENTICATION METHODS
+----------------------
+
+Method 1: JWT Bearer Token (Web UI - Automatic)
+    
+    Header: Authorization: Bearer <token>
+    
+    The frontend automatically:
+    - Sends JWT token with every request
+    - Refreshes token when it expires
+    - Redirects to login if refresh token expires
+
+
+Method 2: API Key (Scripts & Automation)
+    
+    Header: X-API-Key: <your-api-key>
+    
+    To generate:
+    1. Login to web UI
+    2. Go to Profile page
+    3. Click "API Keys" section
+    4. Create new API key
+    5. Copy it (shown only once!)
+
+
+USAGE EXAMPLES
+--------------
+
+Python with JWT:
+    import requests
+    
+    # Login
+    response = requests.post('http://localhost:8001/auth/login', json={
+        'email': 'user@example.com',
+        'password': 'password'
+    })
+    access_token = response.json()['access_token']
+    
+    # Use token
+    headers = {'Authorization': f'Bearer {access_token}'}
+    scans = requests.get('http://localhost:8001/scans', headers=headers)
+
+
+Python with API Key:
+    import requests
+    
+    # No login needed!
+    headers = {'X-API-Key': 'dk_prod_AbCdEfGhIjKlMn...'}
+    scans = requests.get('http://localhost:8001/scans', headers=headers)
+
+
+cURL with JWT:
+    # Login
+    curl -X POST http://localhost:8001/auth/login \
+      -H "Content-Type: application/json" \
+      -d '{"email":"user@example.com","password":"password"}'
+    
+    # Use token
+    curl http://localhost:8001/scans \
+      -H "Authorization: Bearer <token>"
+
+
+cURL with API Key:
+    curl http://localhost:8001/scans \
+      -H "X-API-Key: dk_prod_AbCdEfGhIjKlMn..."
+
+
+SECURITY BEST PRACTICES
+------------------------
+
+1. JWT Tokens:
+   ✓ Short expiration (15-30 minutes)
+   ✓ Use HTTPS in production
+   ✓ Store tokens securely (httpOnly cookies recommended)
+   ✓ Implement token blacklist for logout
+
+2. API Keys:
+   ✓ Set expiration dates for production keys
+   ✓ Use different keys for different services
+   ✓ Rotate keys periodically
+   ✓ Revoke compromised keys immediately
+   ✓ Never commit API keys to git
+
+3. General:
+   ✓ Change SECRET_KEY in production
+   ✓ Use strong passwords (min 8 chars, uppercase, lowercase, number, special)
+   ✓ Enable HTTPS/TLS in production
+   ✓ Monitor authentication failures
+   ✓ Implement rate limiting
+
+
+GLOBAL MIDDLEWARE WORKFLOW
+--------------------------
+
+Every request goes through this flow:
+
+Request → CORS Middleware → Auth Middleware → Your Endpoint
+                                  ↓
+                    Check if route is public (login, health, etc)
+                          ↓ Yes → Allow
+                          ↓ No → Continue
+                    Try JWT authentication
+                          ↓ Valid → Set principal.type = "user"
+                          ↓ Invalid → Continue
+                    Try API Key authentication  
+                          ↓ Valid → Set principal.type = "service"
+                          ↓ Invalid → REJECT 401
+
+After successful auth, request.state.principal contains:
+{
+  "type": "user" or "service",
+  "user": User object,
+  "user_id": "uuid",
+  "email": "user@example.com",
+  "role": "admin" or "user",
+  "auth_method": "jwt" or "api_key"
+}
+
+
+PRINCIPAL TYPES
+---------------
+
+Type: "user" (JWT authentication)
+  - Human users accessing via web UI
+  - Interactive sessions
+  - Logged as: "👤 User john@example.com started scan"
+  
+Type: "service" (API Key authentication)
+  - Automated scripts and services
+  - CI/CD pipelines
+  - Logged as: "🤖 Service automation@example.com started scan"
+
+
+ENDPOINTS REQUIRING AUTHENTICATION
+-----------------------------------
+
+Public endpoints (no authentication):
+- POST /auth/login
+- POST /auth/refresh
+- GET /auth/info
+- GET /health
+- GET /docs, /redoc, /openapi.json
+
+Protected endpoints (automatically require JWT OR API Key):
+- POST /scan
+- GET /scan/json/{scan_id}
+- GET /download/pdf/{scan_id}
+- GET /scans
+- GET /api-keys/
+- POST /api-keys/
+- DELETE /api-keys/{key_id}
+- GET /users/ (admin only)
+- DELETE /users/{user_id} (admin only)
+- All other endpoints (protected by default!)
+
+
+TROUBLESHOOTING
+---------------
+
+Token expired error:
+    - Frontend: Automatic refresh (check browser console)
+    - API: Use refresh token or generate new API key
+
+Invalid token error:
+    - Check token format: "Bearer <token>" or "X-API-Key: <key>"
+    - Verify token hasn't expired
+    - Check SECRET_KEY hasn't changed
+
+Authentication required error:
+    - Add Authorization header (JWT) or X-API-Key header (API Key)
+    - Verify token/key is valid and active
+
+
+GETTING HELP
+------------
+
+Check authentication info:
+    curl http://localhost:8001/auth/info
+
+Test authentication:
+    python test_authentication.py
+
+View example code:
+    cat example_auth_usage.py
+
+
+================================================================================
+                              CONFIGURATION COMPLETE
+================================================================================

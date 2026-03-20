@@ -1,0 +1,29 @@
+# Example docker-compose configuration for external PostgreSQL
+# Copy this file to docker-compose.yml and adjust the settings for your environment
+
+version: '3.8'
+
+services:
+  cyberbridge_backend:
+    build: .
+    container_name: cyberbridge_backend
+    ports:
+      - "8000:8000"
+    environment:
+      # Configure these variables to match your PostgreSQL container
+      - DB_HOST=your_postgres_container_name_or_ip
+      - DB_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=your_password
+      - POSTGRES_DB=your_database_name
+    networks:
+      - your_network_name
+    restart: on-failure
+    depends_on:
+      - your_postgres_service  # Optional: if PostgreSQL is in the same compose file
+
+networks:
+  your_network_name:
+    external: true  # If using an existing network
+    # OR
+    # driver: bridge  # If creating a new network

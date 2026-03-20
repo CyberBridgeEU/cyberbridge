@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  cyberbridge_backend:
+    build: .
+    container_name: cyberbridge_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@cyberbridge_db:5432/postgres
+    networks:
+      - cyberbridge-network
+    depends_on:
+      - cyberbridge_db
+    restart: unless-stopped
+
+networks:
+  cyberbridge-network:
+    external: true  # Use existing network

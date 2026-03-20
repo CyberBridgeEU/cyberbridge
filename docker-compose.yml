@@ -1,0 +1,318 @@
+version: '3.8'
+
+services:
+  # ==================== TIER 1: DATABASE ====================
+  # PostgreSQL Database - Must start first
+  cyberbridge_db:
+    build:
+      context: ./postgres
+      dockerfile: Dockerfile.defaults
+    container_name: cyberbridge_db
+    ports:
+      - "5433:5432"  # Host:Container mapping
+    networks:
+      - cyberbridge-network
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  # ==================== TIER 2: ZAP SERVICE ====================
+  # ZAP Proxy Security Scanner - Starts after database
+  # ZAP daemon takes ~30 seconds to initialize, healthcheck handles this
+  zap:
+    build:
+      context: ./zapproxy
+      dockerfile: Dockerfile
+    container_name: cyberbridge_zap
+    ports:
+      - "8010:8000"  # FastAPI
+      - "8080:8080"  # ZAP daemon (optional, for debugging)
+    volumes:
+      - zap_data:/root/.ZAP
+    networks:
+      - cyberbridge-network
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import requests; requests.get('http://127.0.0.1:8080/', timeout=3)\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      cyberbridge_db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ==================== TIER 3: OTHER SCANNERS & LLM ====================
+  # These services start after ZAP is healthy
+
+  # llama.cpp LLM Service (phi-4 Q4_K_M quantization)
+  llamacpp:
+    build:
+      context: ./llamacpp
+      dockerfile: Dockerfile
+    container_name: cyberbridge_llamacpp
+    ports:
+      - "11435:11435"
+    networks:
+      - cyberbridge-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:11435/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 10G
+    depends_on:
+      zap:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Nmap Network Scanner
+  nmap:
+    build:
+      context: ./nmap
+      dockerfile: Dockerfile
+    container_name: cyberbridge_nmap
+    ports:
+      - "8011:8000"
+    networks:
+      - cyberbridge-network
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/')\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      zap:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # OSV Vulnerability Scanner
+  osv:
+    build:
+      context: ./osvscanner
+      dockerfile: Dockerfile.amd64  # Use Dockerfile.arm64 for ARM architecture
+    container_name: cyberbridge_osv
+    ports:
+      - "8012:8000"
+    networks:
+      - cyberbridge-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      zap:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Semgrep Code Analysis Scanner
+  semgrep:
+    build:
+      context: ./semgrep
+      dockerfile: Dockerfile
+    container_name: cyberbridge_semgrep
+    ports:
+      - "8013:8000"
+    networks:
+      - cyberbridge-network
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/')\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      zap:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Syft SBOM Generator
+  syft:
+    build:
+      context: ./syft
+      dockerfile: Dockerfile.amd64  # Use Dockerfile.arm64 for ARM architecture
+    container_name: cyberbridge_syft
+    ports:
+      - "8014:8000"
+    networks:
+      - cyberbridge-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      zap:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ==================== TIER 4: BACKEND ====================
+  # CyberBridge Backend API - Starts after all scanners and LLM are healthy
+  cyberbridge_backend:
+    build:
+      context: ./cyberbridge_backend
+      dockerfile: Dockerfile
+      args:
+        API_BASE_URL_PROD: https://api.cyberbridge.eu  # Production HTTPS domain
+    container_name: cyberbridge_backend
+    ports:
+      - "5174:8000"  # Host port 5174 -> Container port 8000
+    volumes:
+      - backend_uploads:/app/app/uploads
+      - backend_audit_attachments:/app/uploads/audit_comments
+      - backend_backups:/app/app/backups
+    networks:
+      - cyberbridge-network
+    environment:
+      # Database configuration
+      CONTAINER_ENV: docker
+      DB_HOST: cyberbridge_db
+      DB_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+      # Scanner service URLs (internal Docker network)
+      NMAP_SERVICE_URL: http://nmap:8000
+      SEMGREP_SERVICE_URL: http://semgrep:8000
+      OSV_SERVICE_URL: http://osv:8000
+      ZAP_SERVICE_URL: http://zap:8000
+      SYFT_SERVICE_URL: http://syft:8000
+      CTI_DASHBOARD_BASE_URL: http://cti-service:8000
+      DARK_WEB_SCANNER_URL: http://dark-web-scanner:8001
+      # JWT secret — auto-generated by install.sh (do not hardcode a real value here)
+      SECRET_KEY: REPLACE_WITH_GENERATED_SECRET
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/docs')\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      cyberbridge_db:
+        condition: service_healthy
+      zap:
+        condition: service_healthy
+      nmap:
+        condition: service_healthy
+      osv:
+        condition: service_healthy
+      semgrep:
+        condition: service_healthy
+      syft:
+        condition: service_healthy
+      llamacpp:
+        condition: service_healthy
+    restart: on-failure
+
+  # ==================== TIER 5: FRONTEND ====================
+  # CyberBridge Frontend - Starts last, after backend is healthy
+  cyberbridge_frontend:
+    build:
+      context: ./cyberbridge_frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_PRODUCTION_IP: https://api.cyberbridge.eu  # Production HTTPS domain (without port)
+        VITE_BACKEND_PORT: ""  # Set to backend host port for non-reverse-proxy deployments
+    container_name: cyberbridge_frontend
+    ports:
+      - "5173:5173"
+    networks:
+      - cyberbridge-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:5173 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    depends_on:
+      cyberbridge_backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ==================== CTI SERVICE ====================
+  # Lightweight CTI microservice replacing OpenCTI stack
+  cti-service:
+    build:
+      context: ./cti/service
+      dockerfile: Dockerfile
+    container_name: cyberbridge_cti_service
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@cyberbridge_db:5432/postgres
+      NMAP_SERVICE_URL: http://nmap:8000
+      ZAP_SERVICE_URL: http://zap:8000
+      SEMGREP_SERVICE_URL: http://semgrep:8000
+      OSV_SERVICE_URL: http://osv:8000
+      NMAP_TARGETS: ${NMAP_TARGETS:-127.0.0.1}
+      ZAP_TARGETS: ${ZAP_TARGETS:-http://localhost}
+      SCANNER_POLL_INTERVAL: ${SCANNER_POLL_INTERVAL:-3600}
+    depends_on:
+      cyberbridge_backend:
+        condition: service_healthy
+    networks:
+      - cyberbridge-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # ==================== DARK WEB SCANNER ====================
+  dark-web-scanner:
+    build:
+      context: ./darkweb
+      dockerfile: Dockerfile
+    container_name: cyberbridge_darkweb_scanner
+    restart: unless-stopped
+    ports:
+      - "8030:8001"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@cyberbridge_db:5432/postgres
+      MAX_SCAN_WORKERS: 3
+    depends_on:
+      cyberbridge_backend:
+        condition: service_healthy
+    networks:
+      - cyberbridge-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+networks:
+  cyberbridge-network:
+    driver: bridge
+    name: cyberbridge-network
+
+volumes:
+  postgres_data:
+    driver: local
+  zap_data:
+    driver: local
+  backend_uploads:
+    driver: local
+  backend_audit_attachments:
+    driver: local
+  backend_backups:
+    driver: local

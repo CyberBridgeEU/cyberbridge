@@ -1,0 +1,9 @@
+FROM postgres:16
+
+# Set environment variables (optional if already defined in docker-compose)
+ENV POSTGRES_USER=miaritisnestor
+ENV POSTGRES_PASSWORD=nestor
+ENV POSTGRES_DB=local_applications
+
+# Copy initialization script to create the schema
+COPY init.sql /docker-entrypoint-initdb.d/

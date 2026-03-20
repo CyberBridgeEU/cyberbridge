@@ -1,0 +1,57 @@
+# Node.js dependencies
+node_modules/
+
+# Python virtual environments
+.venv/
+venv/
+
+# FastAPI uploaded files
+cyberbridge_backend/app/uploads/*
+!cyberbridge_backend/app/uploads/.gitkeep
+
+# IDE files
+.idea/
+.vscode/
+
+# Environment files
+.env
+.env.*
+*.env
+
+# Build files
+dist/
+build/
+
+# Generated install/update script output
+docker-compose.generated.yml
+.cyberfort.env
+.cyberfort.last_update_head
+
+# Logs
+*.log
+
+# Cache directories
+.cache/
+__pycache__/
+*.py[cod]
+
+# Package files
+*.egg-info/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Claude Code
+.claude/
+
+# LLM model files (large binaries)
+llamacpp/*.gguf
+llamacpp/*.bin
+
+# Docker volumes / data
+postgres/data/
+
+# Backup files
+*.backup
+*.bak

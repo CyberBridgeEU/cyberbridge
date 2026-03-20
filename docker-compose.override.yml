@@ -1,0 +1,93 @@
+services:
+  zap:
+    depends_on:
+      cyberbridge_db:
+        condition: service_started
+
+  llamacpp:
+    environment:
+      LLAMA_CTX_SIZE: 8192
+      LLAMA_PARALLEL: 1
+    depends_on:
+      cyberbridge_db:
+        condition: service_started
+
+  nmap:
+    depends_on:
+      cyberbridge_db:
+        condition: service_started
+
+  osv:
+    depends_on:
+      cyberbridge_db:
+        condition: service_started
+
+  semgrep:
+    depends_on:
+      cyberbridge_db:
+        condition: service_started
+
+  syft:
+    depends_on:
+      cyberbridge_db:
+        condition: service_started
+
+  cti-service:
+    depends_on:
+      cyberbridge_backend:
+        condition: service_started
+
+  cyberbridge_backend:
+    volumes:
+      - ./cyberbridge_backend:/app
+    command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+      - "5174:8000"
+    environment:
+      PYTHONDONTWRITEBYTECODE: 1
+      PYTHONUNBUFFERED: 1
+      CONTAINER_ENV: docker
+      ENVIRONMENT: development
+      API_BASE_URL: http://localhost:8000
+      DB_HOST: cyberbridge_db
+      DB_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+      NMAP_SERVICE_URL: http://nmap:8000
+      SEMGREP_SERVICE_URL: http://semgrep:8000
+      OSV_SERVICE_URL: http://osv:8000
+      ZAP_SERVICE_URL: http://zap:8000
+      SYFT_SERVICE_URL: http://syft:8000
+      CTI_DASHBOARD_BASE_URL: http://cti-service:8000
+    depends_on:
+      cyberbridge_db:
+        condition: service_healthy
+      zap:
+        condition: service_started
+      nmap:
+        condition: service_started
+      osv:
+        condition: service_started
+      semgrep:
+        condition: service_started
+      syft:
+        condition: service_started
+      llamacpp:
+        condition: service_started
+    healthcheck:
+      disable: true
+
+  cyberbridge_frontend:
+    volumes:
+      - ./cyberbridge_frontend:/app
+      - /app/node_modules
+    command: npm run dev -- --host 0.0.0.0
+    environment:
+      - NODE_ENV=development
+    depends_on:
+      cyberbridge_backend:
+        condition: service_started
+    healthcheck:
+      disable: true

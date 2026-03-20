@@ -1,0 +1,349 @@
+================================================================================
+        CYBERBRIDGE - FRAMEWORK UPDATE PROMPT EXAMPLES
+================================================================================
+
+This guide shows you what to ask Claude when you need to update a framework
+(CRA, ISO27001, or NIS2) with new questions, chapters, or objectives.
+
+================================================================================
+                            WHAT YOU CAN ADD/UPDATE
+================================================================================
+
+✅ CAN ADD:
+-----------
+1. NEW QUESTIONS
+   - Question title
+   - Question text
+   - Which chapter it belongs to
+   - Assessment type (conformity/audit)
+   - Display order
+
+2. NEW CHAPTERS
+   - Chapter name
+   - Chapter description
+   - Chapter number
+   - Display order
+
+3. NEW OBJECTIVES
+   - Objective title
+   - Subchapter identifier (e.g., "3.2.1")
+   - Which chapter it belongs to
+   - Requirement description (what the requirement mandates)
+   - Objective utilities (why this objective matters)
+
+✅ CAN UPDATE (Existing Items):
+--------------------------------
+1. OBJECTIVE FIELDS
+   - Objective title
+   - Requirement description
+   - Objective utilities
+   - Compliance status
+
+❌ CANNOT ADD/UPDATE:
+---------------------
+These are user-generated or organization-specific:
+- Policies (created by users for their organization)
+- Answers (user responses to assessment questions)
+- Evidence (files uploaded by users)
+- Assessments (created by users)
+- Policy-Objective links (set by users)
+
+================================================================================
+                            PROMPT EXAMPLES
+================================================================================
+
+--------------------------------------------------------------------------------
+EXAMPLE 1: Adding New Questions to Existing Chapter
+--------------------------------------------------------------------------------
+PROMPT:
+"Add 3 new questions to CRA Chapter 5 about network security:
+1. 'Does the organization implement network segmentation?'
+2. 'Are all network connections encrypted using industry-standard protocols?'
+3. 'Is network traffic monitored for suspicious activity?'
+All questions should be for conformity assessments."
+
+RESULT:
+- Creates cra_update_X.py
+- Adds 3 questions to Chapter 5
+- All marked as conformity assessment type
+
+--------------------------------------------------------------------------------
+EXAMPLE 2: Adding New Objectives to Existing Subchapter
+--------------------------------------------------------------------------------
+PROMPT:
+"Add 2 new objectives to ISO27001 Subchapter 8.3:
+1. Title: 'Backup Testing',
+   Requirement: 'Organizations must regularly test backup restoration procedures',
+   Utilities: 'Ensures data can be recovered in case of system failure or attack'
+2. Title: 'Backup Encryption',
+   Requirement: 'All backup data must be encrypted at rest and in transit',
+   Utilities: 'Protects sensitive data from unauthorized access during storage and transfer'"
+
+RESULT:
+- Creates iso27001_update_X.py
+- Adds 2 objectives to Subchapter 8.3
+- Includes all required fields
+
+--------------------------------------------------------------------------------
+EXAMPLE 3: Updating Existing Objective
+--------------------------------------------------------------------------------
+PROMPT:
+"Update NIS2 objective in Subchapter 3.1.1:
+- Change the requirement description to: 'Organizations must implement multi-factor authentication for all administrative accounts and remote access'
+- Update utilities to: 'Significantly reduces the risk of unauthorized access even if passwords are compromised'"
+
+RESULT:
+- Creates nis2_update_X.py
+- Updates only the specified fields
+- Preserves all other data
+
+--------------------------------------------------------------------------------
+EXAMPLE 4: Adding New Chapter with Questions and Objectives
+--------------------------------------------------------------------------------
+PROMPT:
+"Add a new Chapter 9 to CRA framework titled 'Supply Chain Security' with description 'Requirements for managing supply chain cybersecurity risks'.
+
+Add 4 questions to this chapter:
+1. 'Does the organization assess cybersecurity risks in the supply chain?'
+2. 'Are suppliers required to comply with security standards?'
+3. 'Is there a process for monitoring supplier security compliance?'
+4. 'Are supply chain incidents reported and managed?'
+
+Add 3 objectives to Subchapter 9.1:
+1. Title: 'Supplier Security Assessment',
+   Requirement: 'All suppliers must undergo security assessment before onboarding',
+   Utilities: 'Prevents introduction of security vulnerabilities through third parties'
+2. Title: 'Supplier Contracts',
+   Requirement: 'Security requirements must be included in supplier contracts',
+   Utilities: 'Ensures legal enforceability of security obligations'
+3. Title: 'Supply Chain Monitoring',
+   Requirement: 'Ongoing monitoring of supplier security posture',
+   Utilities: 'Detects emerging risks in the supply chain'"
+
+RESULT:
+- Creates cra_update_X.py
+- Adds new Chapter 9
+- Adds 4 questions to Chapter 9
+- Adds 3 objectives to Subchapter 9.1
+
+--------------------------------------------------------------------------------
+EXAMPLE 5: Multiple Updates in One Request
+--------------------------------------------------------------------------------
+PROMPT:
+"Update CRA framework:
+1. Add 2 new questions to Chapter 3 about incident response
+2. Update objective 2.1.1 to clarify the security training requirement
+3. Add 1 new objective to Subchapter 4.2 about vulnerability scanning"
+
+RESULT:
+- Creates cra_update_X.py
+- Includes all three types of changes
+- Applied as a single atomic update
+
+--------------------------------------------------------------------------------
+EXAMPLE 6: Comprehensive Framework Enhancement
+--------------------------------------------------------------------------------
+PROMPT:
+"Enhance ISO27001 framework with AI/ML security requirements:
+
+Add new questions to Chapter 12:
+1. 'Does the organization assess risks specific to AI/ML systems?'
+2. 'Are AI/ML models tested for bias and fairness?'
+3. 'Is training data secured and access-controlled?'
+
+Add objectives to Subchapter 12.5:
+1. Title: 'AI Model Security',
+   Requirement: 'AI/ML models must be protected against adversarial attacks',
+   Utilities: 'Prevents manipulation of AI systems that could lead to incorrect decisions'
+2. Title: 'Data Privacy in AI',
+   Requirement: 'Personal data used in AI training must comply with privacy regulations',
+   Utilities: 'Ensures AI systems respect individual privacy rights'
+
+Update objective 12.3.1 to include AI-specific considerations in access control"
+
+RESULT:
+- Creates iso27001_update_X.py
+- Adds questions, objectives, and updates existing objective
+- All changes related to AI/ML security
+
+================================================================================
+                        IMPORTANT GUIDELINES
+================================================================================
+
+1. FRAMEWORK IDENTIFICATION
+   ---------------------------
+   Always specify which framework:
+   - "CRA framework"
+   - "ISO27001 framework"
+   - "NIS2 framework"
+
+2. CHAPTER REFERENCES
+   --------------------
+   Use clear chapter identification:
+   - "Chapter 5" (for new questions)
+   - "Subchapter 3.2.1" (for objectives)
+   - If adding to new chapter, specify chapter number
+
+3. REQUIRED INFORMATION
+   ---------------------
+   For Questions:
+   - Question text (required)
+   - Chapter ID or number (required)
+   - Assessment type (conformity/audit) - defaults to conformity if not specified
+
+   For Objectives:
+   - Title (required)
+   - Subchapter (required)
+   - Requirement description (required)
+   - Objective utilities (required)
+   - Chapter ID (required)
+
+   For Chapter:
+   - Name (required)
+   - Description (optional but recommended)
+   - Chapter number (required)
+
+4. UPDATE SCOPE
+   -------------
+   For updating existing objectives:
+   - Identify by subchapter number
+   - Specify exactly which fields to update
+   - Other fields remain unchanged
+
+5. ASSESSMENT TYPES
+   -----------------
+   Available types:
+   - conformity (default) - Initial compliance check
+   - audit - Formal audit assessment
+
+================================================================================
+                        TIPS FOR EFFECTIVE PROMPTS
+================================================================================
+
+✓ BE SPECIFIC: "Add to Chapter 5" not "Add some questions"
+✓ BE COMPLETE: Include all required fields (title, description, utilities)
+✓ BE CLEAR: Use quotes for exact text you want
+✓ USE STRUCTURE: Number items if adding multiple elements
+✓ REFERENCE EXISTING: Use subchapter numbers to update existing objectives
+
+✗ DON'T BE VAGUE: "Add security questions" (which chapter? what questions?)
+✗ DON'T ASSUME: If you don't specify assessment type, it defaults to conformity
+✗ DON'ON'T FORGET UTILITIES: Every objective needs utilities (the "why")
+
+================================================================================
+                        UNDERSTANDING THE PROCESS
+================================================================================
+
+STEP 1: You provide the prompt (examples above)
+        ↓
+STEP 2: Claude creates a new update file (e.g., cra_update_2.py)
+        ↓
+STEP 3: File is automatically discovered by the system
+        ↓
+STEP 4: Users see "Update 2 - Available" in Framework Management
+        ↓
+STEP 5: Users click "Preview" to see changes
+        ↓
+STEP 6: Users click "Apply" to implement changes
+        ↓
+STEP 7: Update status changes to "Applied"
+
+================================================================================
+                        WHAT HAPPENS TO EXISTING DATA
+================================================================================
+
+When you apply an update:
+
+✓ PRESERVED:
+  - All existing questions remain
+  - All existing objectives remain
+  - All user answers remain
+  - All policies remain
+  - All policy-objective links remain
+  - All assessment data remains
+
++ ADDED:
+  - New questions appear in assessments
+  - New objectives available for policy linking
+  - New chapters organize content better
+
+↻ UPDATED:
+  - Modified objectives show new descriptions
+  - Users see updated requirement text
+  - Objectives maintain same ID (links preserved)
+
+✗ NEVER DELETED:
+  - Updates never remove existing data
+  - Only additions and modifications
+  - All historical data preserved
+
+================================================================================
+                        TROUBLESHOOTING
+================================================================================
+
+PROBLEM: "Update doesn't appear in UI"
+SOLUTION: Make sure you selected exactly ONE framework in the dropdown
+
+PROBLEM: "Preview shows nothing"
+SOLUTION: Check that the update file was created correctly and framework name matches
+
+PROBLEM: "Apply fails"
+SOLUTION: Check chapter IDs exist, verify all required fields are present
+
+PROBLEM: "Need to add to a chapter that doesn't exist yet"
+SOLUTION: First add the chapter, then add questions/objectives in the same update
+
+================================================================================
+                        QUICK REFERENCE
+================================================================================
+
+MINIMAL PROMPT TEMPLATES:
+
+Add Question:
+"Add to [FRAMEWORK] Chapter [X]: '[QUESTION TEXT]' for [conformity/audit] assessment"
+
+Add Objective:
+"Add to [FRAMEWORK] Subchapter [X.Y.Z]:
+Title: '[TITLE]'
+Requirement: '[WHAT IS REQUIRED]'
+Utilities: '[WHY IT MATTERS]'"
+
+Update Objective:
+"Update [FRAMEWORK] objective [X.Y.Z]:
+[field]: '[new value]'"
+
+Add Chapter:
+"Add Chapter [X] to [FRAMEWORK]: '[NAME]' with description '[DESCRIPTION]'"
+
+================================================================================
+                        VERSION TRACKING
+================================================================================
+
+Each update gets an incremental version number:
+- First update: version 1 (e.g., cra_update_1.py)
+- Second update: version 2 (e.g., cra_update_2.py)
+- Third update: version 3 (e.g., cra_update_3.py)
+
+Version numbers are per-framework:
+- CRA: cra_update_1.py, cra_update_2.py, ...
+- ISO27001: iso27001_update_1.py, iso27001_update_2.py, ...
+- NIS2: nis2_update_1.py, nis2_update_2.py, ...
+
+================================================================================
+                        NEED HELP?
+================================================================================
+
+If you're unsure about formatting or what you can request:
+1. Refer to the examples above
+2. Start with a simple request
+3. Ask Claude to clarify before implementing
+4. Review the preview before applying
+
+Remember: Updates are ADDITIVE and SAFE. They never delete existing data!
+
+================================================================================
+                        END OF GUIDE
+================================================================================
+
+Generated by CyberBridge Framework Update System
+For questions or issues, refer to system documentation
