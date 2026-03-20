@@ -10,24 +10,24 @@ interface QuickActionButtonProps {
 
 const variantStyles = {
     primary: {
-        background: 'linear-gradient(135deg, #0f386a, #1e68a3)',
-        hoverBackground: 'linear-gradient(135deg, #0a2d55, #0f386a)',
-        shadowColor: 'rgba(15, 56, 106, 0.4)'
+        background: 'linear-gradient(135deg, #0a2444, #0f386a)',
+        hoverBackground: 'linear-gradient(135deg, #071b33, #0a2444)',
+        shadowColor: 'rgba(10, 36, 68, 0.5)'
     },
     secondary: {
-        background: 'linear-gradient(135deg, #64748b, #94a3b8)',
-        hoverBackground: 'linear-gradient(135deg, #475569, #64748b)',
-        shadowColor: 'rgba(100, 116, 139, 0.4)'
+        background: 'linear-gradient(135deg, #334155, #475569)',
+        hoverBackground: 'linear-gradient(135deg, #1e293b, #334155)',
+        shadowColor: 'rgba(51, 65, 85, 0.5)'
     },
     success: {
-        background: 'linear-gradient(135deg, #10b981, #34d399)',
-        hoverBackground: 'linear-gradient(135deg, #059669, #10b981)',
-        shadowColor: 'rgba(16, 185, 129, 0.4)'
+        background: 'linear-gradient(135deg, #047857, #059669)',
+        hoverBackground: 'linear-gradient(135deg, #064e3b, #047857)',
+        shadowColor: 'rgba(4, 120, 87, 0.5)'
     },
     warning: {
-        background: 'linear-gradient(135deg, #f59e0b, #fbbf24)',
-        hoverBackground: 'linear-gradient(135deg, #d97706, #f59e0b)',
-        shadowColor: 'rgba(245, 158, 11, 0.4)'
+        background: 'linear-gradient(135deg, #b45309, #d97706)',
+        hoverBackground: 'linear-gradient(135deg, #92400e, #b45309)',
+        shadowColor: 'rgba(180, 83, 9, 0.5)'
     }
 };
 

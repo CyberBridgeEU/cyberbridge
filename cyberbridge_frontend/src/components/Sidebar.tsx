@@ -1,6 +1,6 @@
 // src/components/Sidebar.tsx
 import { Menu, Modal, Input, message, Tooltip } from 'antd';
-import { LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined, UserOutlined } from '@ant-design/icons';
+import { LogoutOutlined, LeftOutlined, RightOutlined, UserOutlined } from '@ant-design/icons';
 import { MenuItems } from '../constants/menuItems';
 import useAuthStore from '../store/useAuthStore';
 import useUserStore from '../store/useUserStore';
@@ -187,7 +187,7 @@ export default function Sidebar({ selectedKeys, openKeys, onOpenChange, onClick,
     const sidebarWidth = collapsed ? 80 : 256;
 
     return (
-        <div 
+        <div
             className="sidebar-container"
             style={{
                 width: sidebarWidth,
@@ -200,35 +200,11 @@ export default function Sidebar({ selectedKeys, openKeys, onOpenChange, onClick,
                 position: 'sticky',
                 top: 0,
                 alignSelf: 'flex-start',
-                transition: 'width 0.3s ease, min-width 0.3s ease'
+                transition: 'width 0.3s ease, min-width 0.3s ease',
+                overflow: 'visible',
             }}
         >
         <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', flex: 1 }}>
-            {/* Collapse/Expand Toggle - positioned at sidebar edge */}
-            {!collapsed && (
-                <button
-                    onClick={() => setCollapsed(true)}
-                    style={{
-                        position: 'absolute',
-                        top: '0px',
-                        right: '-6px',
-                        zIndex: 100,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: '28px',
-                        height: '28px',
-                        backgroundColor: 'var(--menu-background)',
-                        border: 'none',
-                        borderRadius: '0',
-                        cursor: 'pointer',
-                        color: 'rgba(255, 255, 255, 0.7)'
-                    }}
-                >
-                    <MenuFoldOutlined style={{ fontSize: '14px' }} />
-                </button>
-            )}
-
             {/* Logo Section */}
             <div style={{
                 padding: collapsed ? '12px 8px' : '16px',
@@ -267,31 +243,6 @@ export default function Sidebar({ selectedKeys, openKeys, onOpenChange, onClick,
                     />
                 )}
             </div>
-
-            {/* Expand button when collapsed */}
-            {collapsed && (
-                <button
-                    onClick={() => setCollapsed(false)}
-                    style={{
-                        position: 'absolute',
-                        top: '0px',
-                        right: '-9px',
-                        zIndex: 100,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: '28px',
-                        height: '28px',
-                        backgroundColor: 'var(--menu-background)',
-                        border: 'none',
-                        borderRadius: '0',
-                        cursor: 'pointer',
-                        color: 'rgba(255, 255, 255, 0.7)'
-                    }}
-                >
-                    <MenuUnfoldOutlined style={{ fontSize: '14px' }} />
-                </button>
-            )}
 
             {/* Menu Section */}
             <div style={{ flex: '1 1 auto', overflowY: 'auto', minHeight: 0 }}>
@@ -383,7 +334,7 @@ export default function Sidebar({ selectedKeys, openKeys, onOpenChange, onClick,
                     </div>
                 ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {/* Top row: Username + CRA Mode side by side */}
+                        {/* Top row: Username + CRA Mode + Collapse button */}
                         <div style={{
                             display: 'flex',
                             alignItems: 'center',
@@ -546,6 +497,42 @@ export default function Sidebar({ selectedKeys, openKeys, onOpenChange, onClick,
                 onClose={() => setIsChatbotOpen(false)}
             />
         </div>
+        {/* Collapse/Expand toggle - protrudes outside sidebar edge */}
+        <button
+            className="sidebar-collapse-btn"
+            onClick={() => setCollapsed(!collapsed)}
+            title={collapsed ? "Expand menu" : "Collapse menu"}
+            style={{
+                position: 'absolute',
+                bottom: '0px',
+                right: '-18px',
+                zIndex: 100,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '18px',
+                height: '100px',
+                backgroundColor: 'var(--menu-background)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderLeft: 'none',
+                borderRadius: '0 6px 6px 0',
+                cursor: 'pointer',
+                color: 'rgba(255, 255, 255, 0.7)',
+                transition: 'color 0.2s ease, background-color 0.2s ease',
+                boxShadow: '2px 0 8px rgba(0,0,0,0.2)',
+                padding: 0,
+            }}
+            onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'rgba(255, 255, 255, 1)';
+                e.currentTarget.style.backgroundColor = 'var(--menu-item-hover)';
+            }}
+            onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
+                e.currentTarget.style.backgroundColor = 'var(--menu-background)';
+            }}
+        >
+            {collapsed ? <RightOutlined style={{ fontSize: '10px' }} /> : <LeftOutlined style={{ fontSize: '10px' }} />}
+        </button>
         </div>
     );
 }

@@ -52,10 +52,10 @@ body {
     --background-white: #ffffff;
 
     /* Menu specific colors - CyberBridge Blue Theme */
-    --menu-background: #0f386a;
-    --menu-item: #174080;
-    --menu-item-hover: #1e4f8f;
-    --menu-item-active: #2b6cb0;
+    --menu-background: #0a1a2e;
+    --menu-item: #0e2240;
+    --menu-item-hover: #142d52;
+    --menu-item-active: #1a3a66;
     --menu-text: #dbe7f6;
     --menu-text-secondary: #9fb6d6;
     --font-heading: 'Rajdhani', system-ui, sans-serif;
@@ -865,6 +865,15 @@ button {
     padding: 0 14px !important;
     border: none !important;
     border-radius: 6px !important;
+}
+
+button.sidebar-collapse-btn {
+    height: 85px !important;
+    min-height: 85px !important;
+    padding: 0 !important;
+    border: none !important;
+    border-left: none !important;
+    border-radius: 0 6px 6px 0 !important;
     font-size: 13px !important;
     font-weight: 500 !important;
     cursor: pointer !important;
