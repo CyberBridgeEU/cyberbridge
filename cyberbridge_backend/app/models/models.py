@@ -673,6 +673,8 @@ class FrameworkUpdates(Base):
     applied_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)  # User who applied the update
     error_message = Column(Text, nullable=True)  # Error details if status=failed
     applied_at = Column(DateTime, nullable=True)  # When the update was applied
+    snapshot_id = Column(UUID(as_uuid=True), ForeignKey("framework_snapshots.id"), nullable=True)  # Pre-update snapshot
+    source = Column(String(50), nullable=False, default="manual")  # manual, regulatory_monitor
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
@@ -2441,4 +2443,99 @@ class DarkwebSettings(Base):
     max_workers = Column(Integer, default=3, nullable=False)
     enabled_engines = Column(Text, nullable=True)  # JSON list
     created_at = Column(DateTime, default=func.now(), nullable=False)
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+
+# ==============================================================================
+# Regulatory Change Monitor
+# ==============================================================================
+
+class FrameworkSnapshot(Base):
+    __tablename__ = "framework_snapshots"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    framework_id = Column(UUID(as_uuid=True), ForeignKey("frameworks.id"), nullable=False)
+    update_version = Column(Integer, nullable=False)
+    snapshot_type = Column(String(20), nullable=False)  # pre_update, pre_revert
+    snapshot_data = Column(Text, nullable=False)  # JSON: chapters, objectives, questions, framework_questions
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime, default=func.now())
+
+
+class RegulatorySource(Base):
+    __tablename__ = "regulatory_sources"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    framework_type = Column(String(100), nullable=False)  # cra, nis2_directive, iso_27001_2022, etc.
+    source_name = Column(String(255), nullable=False)
+    source_type = Column(String(50), nullable=False)  # searxng, eurlex_api, nist_api, direct_scrape, rss
+    search_query = Column(Text, nullable=True)  # Search query template
+    domain_filter = Column(Text, nullable=True)  # JSON array of allowed domains
+    direct_url = Column(Text, nullable=True)  # Direct URL for scraping/API
+    priority = Column(Integer, default=1)  # Lower = higher priority
+    enabled = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+
+class RegulatoryMonitorSettings(Base):
+    __tablename__ = "regulatory_monitor_settings"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    scan_frequency = Column(String(20), nullable=False, default="weekly")  # daily, weekly, biweekly
+    scan_day_of_week = Column(String(10), nullable=True, default="mon")  # mon, tue, etc.
+    scan_hour = Column(Integer, default=4)
+    searxng_url = Column(String(500), default="http://searxng:8080")
+    enabled = Column(Boolean, default=True, nullable=False)
+    last_scan_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+
+class RegulatoryScanRun(Base):
+    __tablename__ = "regulatory_scan_runs"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    status = Column(String(20), nullable=False, default="running")  # running, completed, failed
+    started_at = Column(DateTime, default=func.now())
+    completed_at = Column(DateTime, nullable=True)
+    frameworks_scanned = Column(Integer, default=0)
+    changes_found = Column(Integer, default=0)
+    error_message = Column(Text, nullable=True)
+    raw_log = Column(Text, nullable=True)  # JSON log entries
+    created_at = Column(DateTime, default=func.now())
+
+
+class RegulatoryScanResult(Base):
+    __tablename__ = "regulatory_scan_results"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    scan_run_id = Column(UUID(as_uuid=True), ForeignKey("regulatory_scan_runs.id"), nullable=False)
+    framework_type = Column(String(100), nullable=False)
+    source_name = Column(String(255), nullable=False)
+    source_url = Column(Text, nullable=True)
+    raw_content = Column(Text, nullable=True)
+    content_hash = Column(String(64), nullable=True)  # SHA256 for dedup across runs
+    fetched_at = Column(DateTime, default=func.now())
+    created_at = Column(DateTime, default=func.now())
+
+
+class RegulatoryChange(Base):
+    __tablename__ = "regulatory_changes"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    scan_run_id = Column(UUID(as_uuid=True), ForeignKey("regulatory_scan_runs.id"), nullable=False)
+    framework_type = Column(String(100), nullable=False)
+    change_type = Column(String(50), nullable=False)  # new_chapter, new_objective, update_objective, new_question, update_question, remove_objective
+    entity_identifier = Column(String(255), nullable=True)  # e.g. subchapter "3.2.7"
+    current_value = Column(Text, nullable=True)  # JSON of current state
+    proposed_value = Column(Text, nullable=True)  # JSON of proposed state
+    source_url = Column(Text, nullable=True)
+    source_excerpt = Column(Text, nullable=True)
+    confidence = Column(Float, nullable=True)  # 0.0 - 1.0
+    llm_reasoning = Column(Text, nullable=True)
+    status = Column(String(20), nullable=False, default="pending")  # pending, approved, rejected, applied
+    reviewed_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    reviewed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())

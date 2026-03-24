@@ -960,6 +960,44 @@ def apply_framework_update(
         )
 
 
+@router.get("/{framework_id}/snapshots")
+def list_framework_snapshots(
+    framework_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: schemas.UserBase = Depends(get_current_active_user)
+):
+    """List all snapshots for a framework."""
+    if current_user.role_name not in ["super_admin", "org_admin"]:
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    try:
+        from app.services.framework_snapshot_service import FrameworkSnapshotService
+        return FrameworkSnapshotService.list_snapshots(db, framework_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{framework_id}/snapshots/{snapshot_id}/revert")
+def revert_framework_snapshot(
+    framework_id: uuid.UUID,
+    snapshot_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: schemas.UserBase = Depends(get_current_active_user)
+):
+    """Revert a framework to a previous snapshot state."""
+    if current_user.role_name not in ["super_admin", "org_admin"]:
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    try:
+        from app.services.framework_snapshot_service import FrameworkSnapshotService
+        result = FrameworkSnapshotService.revert_to_snapshot(db, framework_id, snapshot_id, current_user.id)
+        db.commit()
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/{framework_id}/scope-config", response_model=schemas.FrameworkScopeConfig)
 def get_framework_scope_config(
     framework_id: uuid.UUID,

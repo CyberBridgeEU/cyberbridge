@@ -7,10 +7,11 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
 from app.database.database import Base, engine, get_db
-from app.routers import users_controller, frameworks_controller, questions_controller, assessments_controller, answers_controller, auth_controller, objectives_controller, risks_controller, policies_controller, home_controller, assessment_types_controller, settings_controller, admin_controller, history_controller, ai_tools_controller, scanners_controller, scopes_controller, backups_controller, audit_engagements_controller, auditor_auth_controller, auditor_review_controller, audit_comments_controller, audit_findings_controller, evidence_integrity_controller, audit_export_controller, audit_dashboard_controller, nvd_controller, audit_notifications_controller, onboarding_controller, policy_aligner_controller, assets_controller, controls_controller, architecture_controller, evidence_controller, compliance_advisor_controller, incidents_controller, euvd_controller, risk_assessments_controller, ce_marking_controller, advisories_controller, gap_analysis_controller, chain_map_controller, suggestions_controller, chatbot_controller, cti_controller, dark_web_controller, api_keys_controller
+from app.routers import users_controller, frameworks_controller, questions_controller, assessments_controller, answers_controller, auth_controller, objectives_controller, risks_controller, policies_controller, home_controller, assessment_types_controller, settings_controller, admin_controller, history_controller, ai_tools_controller, scanners_controller, scopes_controller, backups_controller, audit_engagements_controller, auditor_auth_controller, auditor_review_controller, audit_comments_controller, audit_findings_controller, evidence_integrity_controller, audit_export_controller, audit_dashboard_controller, nvd_controller, audit_notifications_controller, onboarding_controller, policy_aligner_controller, assets_controller, controls_controller, architecture_controller, evidence_controller, compliance_advisor_controller, incidents_controller, euvd_controller, risk_assessments_controller, ce_marking_controller, advisories_controller, gap_analysis_controller, chain_map_controller, suggestions_controller, chatbot_controller, cti_controller, dark_web_controller, api_keys_controller, regulatory_monitor_controller
 from app.seeds import SeedManager
 from app.config.environment import get_api_base_url, get_environment_name
 from app.services import history_cleanup_service, backup_service, nvd_service, euvd_service, scan_scheduler_service
+from app.services.regulatory_monitor_service import RegulatoryMonitorService
 from app.repositories import euvd_repository
 from app.middleware import ActivityTrackerMiddleware
 import logging
@@ -107,6 +108,7 @@ app.include_router(chatbot_controller.router)
 app.include_router(cti_controller.router)
 app.include_router(dark_web_controller.router)
 app.include_router(api_keys_controller.router)
+app.include_router(regulatory_monitor_controller.router)
 
 # Initialize scheduler
 scheduler = AsyncIOScheduler()
@@ -199,6 +201,29 @@ async def startup_event():
 
     # Initialize scan scheduler service and load all enabled scan schedules
     scan_scheduler_service.init_scheduler(scheduler)
+
+    # Schedule Regulatory Change Monitor web scan
+    from app.repositories import regulatory_monitor_repository
+    reg_db = next(get_db())
+    try:
+        reg_settings = regulatory_monitor_repository.get_settings(reg_db)
+        if reg_settings and reg_settings.enabled:
+            day_map = {"daily": "*", "weekly": reg_settings.scan_day_of_week or "mon", "biweekly": reg_settings.scan_day_of_week or "mon"}
+            scan_day = day_map.get(reg_settings.scan_frequency, "mon")
+            scheduler.add_job(
+                RegulatoryMonitorService.run_web_scan,
+                trigger=CronTrigger(day_of_week=scan_day, hour=reg_settings.scan_hour),
+                id='regulatory_monitor_job',
+                name='Regulatory Change Monitor',
+                replace_existing=True
+            )
+            logger.info(f"Regulatory monitor scheduled: {reg_settings.scan_frequency} at {reg_settings.scan_hour}:00")
+        else:
+            logger.info("Regulatory monitor not configured or disabled")
+    except Exception as e:
+        logger.info(f"Regulatory monitor not yet configured: {e}")
+    finally:
+        reg_db.close()
 
     scheduler.start()
 

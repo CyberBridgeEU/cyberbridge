@@ -1,0 +1,61 @@
+# SearXNG Configuration for CyberBridge Regulatory Monitor
+# Self-hosted meta-search engine for regulatory change detection
+
+use_default_settings: true
+
+general:
+  instance_name: "CyberBridge Regulatory Search"
+  debug: false
+
+search:
+  safe_search: 0
+  autocomplete: ""
+  default_lang: "en"
+  formats:
+    - html
+    - json
+
+server:
+  secret_key: "cyberbridge-searxng-secret-change-in-production"
+  bind_address: "0.0.0.0"
+  port: 8080
+  limiter: false
+
+ui:
+  static_use_hash: true
+
+engines:
+  # Google - Primary search engine
+  - name: google
+    engine: google
+    shortcut: g
+    disabled: false
+
+  # Bing - Secondary search engine
+  - name: bing
+    engine: bing
+    shortcut: b
+    disabled: false
+
+  # DuckDuckGo - Privacy-focused search
+  - name: duckduckgo
+    engine: duckduckgo
+    shortcut: ddg
+    disabled: false
+
+  # Google Scholar - Academic/regulatory papers
+  - name: google scholar
+    engine: google_scholar
+    shortcut: gs
+    disabled: false
+
+  # Wikipedia - Reference material
+  - name: wikipedia
+    engine: wikipedia
+    shortcut: wp
+    disabled: false
+
+outgoing:
+  request_timeout: 10.0
+  max_request_timeout: 15.0
+  useragent_suffix: "CyberBridge Regulatory Monitor"

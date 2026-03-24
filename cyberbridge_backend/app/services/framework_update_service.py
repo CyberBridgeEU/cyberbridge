@@ -8,6 +8,7 @@ import os
 
 from ..models.models import FrameworkUpdates, Framework, Chapters, Objectives, Question, FrameworkQuestion
 from ..seeds.updates.base_framework_update import BaseFrameworkUpdate
+from .framework_snapshot_service import FrameworkSnapshotService
 
 
 class FrameworkUpdateService:
@@ -41,9 +42,10 @@ class FrameworkUpdateService:
         # Discover all update files for this framework
         update_files = FrameworkUpdateService._discover_update_files(framework_type)
 
-        # Get all applied updates from database
+        # Get all applied updates from database (exclude regulatory monitor updates which use version 10000+)
         applied_updates = db.query(FrameworkUpdates).filter(
-            FrameworkUpdates.framework_id == framework_id
+            FrameworkUpdates.framework_id == framework_id,
+            FrameworkUpdates.source == "manual"
         ).all()
 
         # Create a map of version -> status
@@ -252,6 +254,11 @@ class FrameworkUpdateService:
 
             update_instance = update_class()
 
+            # Create pre-update snapshot
+            snapshot = FrameworkSnapshotService.create_snapshot(
+                db, framework_id, version, "pre_update", user_id
+            )
+
             # Track changes
             changes = {
                 "new_questions_count": 0,
@@ -362,6 +369,7 @@ class FrameworkUpdateService:
                 existing_update.applied_by = user_id
                 existing_update.applied_at = datetime.utcnow()
                 existing_update.error_message = None
+                existing_update.snapshot_id = snapshot.id
                 existing_update.updated_at = datetime.utcnow()
                 update_record = existing_update
             else:
@@ -375,6 +383,8 @@ class FrameworkUpdateService:
                     status="applied",
                     applied_by=user_id,
                     applied_at=datetime.utcnow(),
+                    snapshot_id=snapshot.id,
+                    source="manual",
                     created_at=datetime.utcnow(),
                     updated_at=datetime.utcnow()
                 )

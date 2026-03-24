@@ -119,6 +119,12 @@ const BackgroundJobsPage = () => {
     const [euvdEnabled, setEuvdEnabled] = useState(true);
     const [savingEuvdSettings, setSavingEuvdSettings] = useState(false);
 
+    // Regulatory Monitor state
+    const [regMonitorSettings, setRegMonitorSettings] = useState<any>(null);
+    const [regScanRuns, setRegScanRuns] = useState<any[]>([]);
+    const [loadingRegMonitor, setLoadingRegMonitor] = useState(false);
+    const [triggeringRegScan, setTriggeringRegScan] = useState(false);
+
     // Scan schedule state
     const { schedules, loading: schedulesLoading, fetchSchedules, deleteSchedule, toggleSchedule } = useScanScheduleStore();
     const [editingSchedule, setEditingSchedule] = useState<ScanSchedule | null>(null);
@@ -171,11 +177,53 @@ const BackgroundJobsPage = () => {
         if (current_user?.role_name === 'super_admin') {
             loadNvdData();
             loadEuvdData();
+            loadRegMonitorData();
         }
         loadBackupData();
         loadHistoryConfig();
         fetchSchedules();
     }, [current_user]);
+
+    // Regulatory Monitor data loading
+    const loadRegMonitorData = async () => {
+        setLoadingRegMonitor(true);
+        try {
+            const [settingsRes, runsRes] = await Promise.all([
+                fetch(`${cyberbridge_back_end_rest_api}/regulatory-monitor/settings`, {
+                    headers: { ...getAuthHeader() }
+                }),
+                fetch(`${cyberbridge_back_end_rest_api}/regulatory-monitor/scan-runs?limit=5`, {
+                    headers: { ...getAuthHeader() }
+                })
+            ]);
+            if (settingsRes.ok) setRegMonitorSettings(await settingsRes.json());
+            if (runsRes.ok) setRegScanRuns(await runsRes.json());
+        } catch (err) {
+            console.error('Failed to load regulatory monitor data:', err);
+        } finally {
+            setLoadingRegMonitor(false);
+        }
+    };
+
+    const triggerRegulatoryScan = async () => {
+        setTriggeringRegScan(true);
+        try {
+            const res = await fetch(`${cyberbridge_back_end_rest_api}/regulatory-monitor/scan`, {
+                method: 'POST',
+                headers: { ...getAuthHeader() }
+            });
+            if (res.ok) {
+                api.success({ message: 'Regulatory Scan Complete', description: 'Web scan finished successfully.' });
+                loadRegMonitorData();
+            } else {
+                api.error({ message: 'Scan Failed', description: 'Regulatory web scan failed.' });
+            }
+        } catch (err) {
+            api.error({ message: 'Scan Failed', description: 'Could not reach the server.' });
+        } finally {
+            setTriggeringRegScan(false);
+        }
+    };
 
     // NVD data loading
     const loadNvdData = async () => {
@@ -1231,6 +1279,69 @@ const BackgroundJobsPage = () => {
                                             </Descriptions.Item>
                                         </Descriptions>
                                     </Card>
+
+                                    {/* Regulatory Change Monitor - Super Admin Only */}
+                                    {isSuperAdmin && (
+                                        <Card
+                                            title={
+                                                <Space>
+                                                    <CloudSyncOutlined />
+                                                    <span>Regulatory Change Monitor</span>
+                                                    {regMonitorSettings?.enabled ? (
+                                                        <Tag color="success">Enabled</Tag>
+                                                    ) : (
+                                                        <Tag color="default">Disabled</Tag>
+                                                    )}
+                                                </Space>
+                                            }
+                                            extra={
+                                                <Button
+                                                    type="primary"
+                                                    size="small"
+                                                    icon={<PlayCircleOutlined />}
+                                                    onClick={triggerRegulatoryScan}
+                                                    loading={triggeringRegScan}
+                                                    style={{ background: '#1a365d', borderColor: '#1a365d' }}
+                                                >
+                                                    Run Now
+                                                </Button>
+                                            }
+                                            loading={loadingRegMonitor}
+                                        >
+                                            <Descriptions column={1} size="small">
+                                                <Descriptions.Item label="Schedule">
+                                                    {regMonitorSettings ? (
+                                                        regMonitorSettings.scan_frequency === 'daily'
+                                                            ? `Daily at ${String(regMonitorSettings.scan_hour).padStart(2, '0')}:00 UTC`
+                                                            : regMonitorSettings.scan_frequency === 'weekly'
+                                                                ? `Weekly on ${(regMonitorSettings.scan_day_of_week || 'mon').charAt(0).toUpperCase() + (regMonitorSettings.scan_day_of_week || 'mon').slice(1)} at ${String(regMonitorSettings.scan_hour).padStart(2, '0')}:00 UTC`
+                                                                : `Biweekly on ${(regMonitorSettings.scan_day_of_week || 'mon').charAt(0).toUpperCase() + (regMonitorSettings.scan_day_of_week || 'mon').slice(1)} at ${String(regMonitorSettings.scan_hour).padStart(2, '0')}:00 UTC`
+                                                    ) : '-'}
+                                                </Descriptions.Item>
+                                                <Descriptions.Item label="Last Scan">
+                                                    {regMonitorSettings?.last_scan_at
+                                                        ? new Date(regMonitorSettings.last_scan_at).toLocaleString()
+                                                        : 'Never'}
+                                                </Descriptions.Item>
+                                                <Descriptions.Item label="Last Status">
+                                                    {regScanRuns.length > 0 ? (
+                                                        <Tag color={regScanRuns[0].status === 'completed' ? 'success' : regScanRuns[0].status === 'failed' ? 'error' : 'processing'}>
+                                                            {regScanRuns[0].status.toUpperCase()}
+                                                        </Tag>
+                                                    ) : '-'}
+                                                </Descriptions.Item>
+                                                <Descriptions.Item label="Last Findings">
+                                                    {regScanRuns.length > 0 ? `${regScanRuns[0].changes_found} new findings across ${regScanRuns[0].frameworks_scanned} frameworks` : '-'}
+                                                </Descriptions.Item>
+                                                <Descriptions.Item label="SearXNG URL">
+                                                    {regMonitorSettings?.searxng_url || '-'}
+                                                </Descriptions.Item>
+                                                <Descriptions.Item label="Description">
+                                                    Searches the web for regulatory changes across all frameworks using SearXNG, EUR-Lex, and NIST APIs. Results are saved for LLM analysis on the Framework Updates page.
+                                                </Descriptions.Item>
+                                            </Descriptions>
+                                        </Card>
+                                    )}
                                 </div>
                             )
                         },

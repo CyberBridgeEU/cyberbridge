@@ -1,11 +1,14 @@
 import React, {useEffect, useState} from 'react';
-import {Select, notification} from "antd";
-import {SyncOutlined} from "@ant-design/icons";
+import {Select, notification, Alert, Button, Space} from "antd";
+import {SyncOutlined, RadarChartOutlined, ReloadOutlined, ExperimentOutlined} from "@ant-design/icons";
 import Sidebar from "../components/Sidebar.tsx";
 import useFrameworksStore from "../store/useFrameworksStore.ts";
 import useUserStore from "../store/useUserStore.ts";
+import useRegulatoryMonitorStore from "../store/useRegulatoryMonitorStore.ts";
 import InfoTitle from "../components/InfoTitle.tsx";
 import FrameworkUpdatesSection from "../components/FrameworkUpdatesSection.tsx";
+import RegulatoryChangesSection from "../components/RegulatoryChangesSection.tsx";
+import SnapshotTimeline from "../components/SnapshotTimeline.tsx";
 import { useLocation } from 'wouter';
 import { useMenuHighlighting } from "../utils/menuUtils.ts";
 
@@ -16,15 +19,34 @@ const FrameworkUpdatesPage: React.FC = () => {
     // Global State
     const {frameworks, fetchFrameworks} = useFrameworksStore();
     const {current_user} = useUserStore();
+    const {
+        notification: regNotification,
+        fetchNotifications,
+        triggerLLMAnalysis,
+        analyzing,
+        triggerScan,
+        cancelAnalysis
+    } = useRegulatoryMonitorStore();
 
     // Local State
     const [frameworkSelectedId, setFrameworkSelectedId] = useState<string>('');
+    const [analysisFramework, setAnalysisFramework] = useState<string | null>(null);
     const [api, contextHolder] = notification.useNotification();
+    const [scanTriggering, setScanTriggering] = useState(false);
+    const [analysisCancelled, setAnalysisCancelled] = useState(false);
 
     // On Component Mount
+    // Fetch frameworks on mount
     useEffect(() => {
         fetchFrameworks();
     }, []);
+
+    // Fetch regulatory notifications once user is loaded
+    useEffect(() => {
+        if (current_user?.role_name === 'super_admin' || current_user?.role_name === 'org_admin') {
+            fetchNotifications();
+        }
+    }, [current_user?.role_name]);
 
     // Framework options
     const options = frameworks.map(framework => ({
@@ -36,6 +58,65 @@ const FrameworkUpdatesPage: React.FC = () => {
     const handleFrameworkChange = (value: string) => {
         setFrameworkSelectedId(value);
     };
+
+    // Handle LLM analysis trigger
+    const handleAnalyze = async () => {
+        if (!regNotification?.scan_run_id || !analysisFramework) return;
+        setAnalysisCancelled(false);
+        api.info({
+            message: 'LLM Analysis Started',
+            description: `Analyzing regulatory changes for ${analysisFramework.toUpperCase()}. This may take a minute...`,
+            duration: 5
+        });
+        const result = await triggerLLMAnalysis(regNotification.scan_run_id, analysisFramework);
+        if (analysisCancelled) return; // User cancelled
+        if (result) {
+            if (result.status === 'completed') {
+                api.success({
+                    message: 'LLM Analysis Complete',
+                    description: `Found ${result.changes_count} regulatory changes for ${analysisFramework.toUpperCase()}`,
+                });
+                fetchNotifications();
+            } else if (result.status === 'llm_error') {
+                api.warning({
+                    message: 'LLM Analysis Failed',
+                    description: result.message || 'Automatic analysis failed. Check LLM service.',
+                    duration: 10
+                });
+            } else {
+                api.info({
+                    message: 'No Changes Found',
+                    description: `No regulatory changes detected for ${analysisFramework.toUpperCase()}`,
+                });
+            }
+        } else {
+            if (!analysisCancelled) {
+                api.error({ message: 'Analysis Failed', description: 'Failed to run LLM analysis' });
+            }
+        }
+    };
+
+    // Handle cancel — aborts the fetch request via AbortController
+    const handleCancelAnalysis = () => {
+        setAnalysisCancelled(true);
+        cancelAnalysis();
+        api.info({ message: 'Analysis Cancelled', description: 'LLM analysis request was cancelled.' });
+    };
+
+    // Handle manual scan trigger
+    const handleTriggerScan = async () => {
+        setScanTriggering(true);
+        const success = await triggerScan();
+        setScanTriggering(false);
+        if (success) {
+            api.success({ message: 'Scan Complete', description: 'Regulatory web scan completed successfully' });
+            fetchNotifications();
+        } else {
+            api.error({ message: 'Scan Failed', description: 'Failed to run regulatory scan' });
+        }
+    };
+
+    const isAdmin = current_user?.role_name === 'super_admin' || current_user?.role_name === 'org_admin';
 
     return (
         <div>
@@ -51,7 +132,82 @@ const FrameworkUpdatesPage: React.FC = () => {
                             <SyncOutlined style={{ fontSize: 22, color: '#1a365d' }} />
                             <h1 className="page-title" style={{ margin: 0 }}>Framework Updates</h1>
                         </div>
+                        {current_user?.role_name === 'super_admin' && (
+                            <div className="page-header-right">
+                                <Button
+                                    icon={<ReloadOutlined />}
+                                    onClick={handleTriggerScan}
+                                    loading={scanTriggering}
+                                    style={{ background: '#1a365d', color: '#fff', borderColor: '#1a365d' }}
+                                >
+                                    Run Regulatory Scan
+                                </Button>
+                            </div>
+                        )}
                     </div>
+
+                    {/* Regulatory Monitor Notification Box */}
+                    {isAdmin && regNotification?.has_findings && (
+                        <div className="page-section">
+                            <Alert
+                                type="info"
+                                showIcon
+                                icon={<RadarChartOutlined />}
+                                message="Regulatory changes detected"
+                                description={
+                                    <div>
+                                        <p style={{ margin: '4px 0' }}>
+                                            Last scan: {regNotification.scan_date
+                                                ? new Date(regNotification.scan_date).toLocaleString()
+                                                : 'N/A'}
+                                        </p>
+                                        <p style={{ margin: '4px 0' }}>
+                                            New findings for: {regNotification.frameworks.join(', ').toUpperCase()}
+                                        </p>
+                                        {Object.keys(regNotification.pending_changes).length > 0 && (
+                                            <p style={{ margin: '4px 0', color: '#faad14' }}>
+                                                Pending review: {Object.entries(regNotification.pending_changes)
+                                                    .map(([fw, info]) => `${fw.toUpperCase()} (${(info as any).count})`)
+                                                    .join(', ')}
+                                            </p>
+                                        )}
+                                        <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
+                                            <Select
+                                                placeholder="Select framework to analyze"
+                                                value={analysisFramework || undefined}
+                                                onChange={(value) => setAnalysisFramework(value)}
+                                                style={{ width: 300 }}
+                                                options={regNotification.frameworks.map(fw => ({
+                                                    value: fw,
+                                                    label: fw.toUpperCase().replace(/_/g, ' ')
+                                                }))}
+                                                disabled={analyzing}
+                                            />
+                                            <Button
+                                                type="primary"
+                                                icon={<ExperimentOutlined />}
+                                                onClick={handleAnalyze}
+                                                loading={analyzing}
+                                                disabled={!analysisFramework || analyzing}
+                                                style={{ background: '#1a365d', borderColor: '#1a365d' }}
+                                            >
+                                                Start LLM Analysis
+                                            </Button>
+                                            {analyzing && (
+                                                <Button
+                                                    danger
+                                                    onClick={handleCancelAnalysis}
+                                                >
+                                                    Cancel
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                }
+                                style={{ marginBottom: 0 }}
+                            />
+                        </div>
+                    )}
 
                     {/* Framework Selection */}
                     <div className="page-section">
@@ -101,6 +257,25 @@ const FrameworkUpdatesPage: React.FC = () => {
                             </div>
                         )}
                     </div>
+
+                    {/* Regulatory Changes Section */}
+                    {isAdmin && frameworkSelectedId && (
+                        <div className="page-section">
+                            <RegulatoryChangesSection
+                                frameworkId={frameworkSelectedId}
+                                userRole={current_user?.role_name}
+                            />
+                        </div>
+                    )}
+
+                    {/* Snapshots & History Section */}
+                    {isAdmin && frameworkSelectedId && (
+                        <div className="page-section">
+                            <SnapshotTimeline
+                                frameworkId={frameworkSelectedId}
+                            />
+                        </div>
+                    )}
 
                 </div>
             </div>
