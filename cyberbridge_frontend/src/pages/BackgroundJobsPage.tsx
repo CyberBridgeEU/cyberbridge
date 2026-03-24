@@ -1,6 +1,6 @@
 // src/pages/BackgroundJobsPage.tsx
 import { useEffect, useState } from "react";
-import { Card, Table, Button, Tag, Space, notification, Spin, Descriptions, Tabs, Popconfirm, Progress, InputNumber, Tooltip } from 'antd';
+import { Card, Table, Button, Tag, Space, notification, Spin, Descriptions, Tabs, Popconfirm, Progress, InputNumber, Tooltip, Select, Input } from 'antd';
 import { ScheduleOutlined, PlayCircleOutlined, ClockCircleOutlined, CheckCircleOutlined, CloseCircleOutlined, SyncOutlined, DeleteOutlined, CloudSyncOutlined, DatabaseOutlined, HistoryOutlined, BugOutlined, EditOutlined, SaveOutlined, CloseOutlined, RadarChartOutlined, PauseCircleOutlined } from '@ant-design/icons';
 import Sidebar from "../components/Sidebar.tsx";
 import { useLocation } from 'wouter';
@@ -124,6 +124,13 @@ const BackgroundJobsPage = () => {
     const [regScanRuns, setRegScanRuns] = useState<any[]>([]);
     const [loadingRegMonitor, setLoadingRegMonitor] = useState(false);
     const [triggeringRegScan, setTriggeringRegScan] = useState(false);
+    const [editingRegMonitor, setEditingRegMonitor] = useState(false);
+    const [regEnabled, setRegEnabled] = useState(true);
+    const [regFrequency, setRegFrequency] = useState('weekly');
+    const [regDayOfWeek, setRegDayOfWeek] = useState('mon');
+    const [regHour, setRegHour] = useState(4);
+    const [regSearxngUrl, setRegSearxngUrl] = useState('http://searxng:8080');
+    const [savingRegSettings, setSavingRegSettings] = useState(false);
 
     // Scan schedule state
     const { schedules, loading: schedulesLoading, fetchSchedules, deleteSchedule, toggleSchedule } = useScanScheduleStore();
@@ -222,6 +229,49 @@ const BackgroundJobsPage = () => {
             api.error({ message: 'Scan Failed', description: 'Could not reach the server.' });
         } finally {
             setTriggeringRegScan(false);
+        }
+    };
+
+    const startEditRegMonitor = () => {
+        if (regMonitorSettings) {
+            setRegEnabled(regMonitorSettings.enabled);
+            setRegFrequency(regMonitorSettings.scan_frequency || 'weekly');
+            setRegDayOfWeek(regMonitorSettings.scan_day_of_week || 'mon');
+            setRegHour(regMonitorSettings.scan_hour ?? 4);
+            setRegSearxngUrl(regMonitorSettings.searxng_url || 'http://searxng:8080');
+        }
+        setEditingRegMonitor(true);
+    };
+
+    const cancelRegMonitorEdit = () => {
+        setEditingRegMonitor(false);
+    };
+
+    const saveRegMonitorSettings = async () => {
+        setSavingRegSettings(true);
+        try {
+            const res = await fetch(`${cyberbridge_back_end_rest_api}/regulatory-monitor/settings`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+                body: JSON.stringify({
+                    enabled: regEnabled,
+                    scan_frequency: regFrequency,
+                    scan_day_of_week: regFrequency !== 'daily' ? regDayOfWeek : undefined,
+                    scan_hour: regHour,
+                    searxng_url: regSearxngUrl
+                })
+            });
+            if (res.ok) {
+                api.success({ message: 'Settings Saved', description: 'Regulatory monitor settings updated.' });
+                setEditingRegMonitor(false);
+                loadRegMonitorData();
+            } else {
+                api.error({ message: 'Save Failed', description: 'Could not update settings.' });
+            }
+        } catch (err) {
+            api.error({ message: 'Save Failed', description: 'Could not reach the server.' });
+        } finally {
+            setSavingRegSettings(false);
         }
     };
 
@@ -1295,51 +1345,151 @@ const BackgroundJobsPage = () => {
                                                 </Space>
                                             }
                                             extra={
-                                                <Button
-                                                    type="primary"
-                                                    size="small"
-                                                    icon={<PlayCircleOutlined />}
-                                                    onClick={triggerRegulatoryScan}
-                                                    loading={triggeringRegScan}
-                                                    style={{ background: '#1a365d', borderColor: '#1a365d' }}
-                                                >
-                                                    Run Now
-                                                </Button>
+                                                <Space>
+                                                    <Button
+                                                        type="primary"
+                                                        size="small"
+                                                        icon={<PlayCircleOutlined />}
+                                                        onClick={triggerRegulatoryScan}
+                                                        loading={triggeringRegScan}
+                                                        style={{ background: '#1a365d', borderColor: '#1a365d' }}
+                                                    >
+                                                        Run Now
+                                                    </Button>
+                                                    {!editingRegMonitor && (
+                                                        <Button
+                                                            size="small"
+                                                            icon={<EditOutlined />}
+                                                            onClick={startEditRegMonitor}
+                                                        />
+                                                    )}
+                                                </Space>
                                             }
                                             loading={loadingRegMonitor}
                                         >
-                                            <Descriptions column={1} size="small">
-                                                <Descriptions.Item label="Schedule">
-                                                    {regMonitorSettings ? (
-                                                        regMonitorSettings.scan_frequency === 'daily'
-                                                            ? `Daily at ${String(regMonitorSettings.scan_hour).padStart(2, '0')}:00 UTC`
-                                                            : regMonitorSettings.scan_frequency === 'weekly'
-                                                                ? `Weekly on ${(regMonitorSettings.scan_day_of_week || 'mon').charAt(0).toUpperCase() + (regMonitorSettings.scan_day_of_week || 'mon').slice(1)} at ${String(regMonitorSettings.scan_hour).padStart(2, '0')}:00 UTC`
-                                                                : `Biweekly on ${(regMonitorSettings.scan_day_of_week || 'mon').charAt(0).toUpperCase() + (regMonitorSettings.scan_day_of_week || 'mon').slice(1)} at ${String(regMonitorSettings.scan_hour).padStart(2, '0')}:00 UTC`
-                                                    ) : '-'}
-                                                </Descriptions.Item>
-                                                <Descriptions.Item label="Last Scan">
-                                                    {regMonitorSettings?.last_scan_at
-                                                        ? new Date(regMonitorSettings.last_scan_at).toLocaleString()
-                                                        : 'Never'}
-                                                </Descriptions.Item>
-                                                <Descriptions.Item label="Last Status">
-                                                    {regScanRuns.length > 0 ? (
-                                                        <Tag color={regScanRuns[0].status === 'completed' ? 'success' : regScanRuns[0].status === 'failed' ? 'error' : 'processing'}>
-                                                            {regScanRuns[0].status.toUpperCase()}
-                                                        </Tag>
-                                                    ) : '-'}
-                                                </Descriptions.Item>
-                                                <Descriptions.Item label="Last Findings">
-                                                    {regScanRuns.length > 0 ? `${regScanRuns[0].changes_found} new findings across ${regScanRuns[0].frameworks_scanned} frameworks` : '-'}
-                                                </Descriptions.Item>
-                                                <Descriptions.Item label="SearXNG URL">
-                                                    {regMonitorSettings?.searxng_url || '-'}
-                                                </Descriptions.Item>
-                                                <Descriptions.Item label="Description">
-                                                    Searches the web for regulatory changes across all frameworks using SearXNG, EUR-Lex, and NIST APIs. Results are saved for LLM analysis on the Framework Updates page.
-                                                </Descriptions.Item>
-                                            </Descriptions>
+                                            {editingRegMonitor ? (
+                                                <div>
+                                                    <div style={{ marginBottom: 12 }}>
+                                                        <div
+                                                            className="ai-toggle-container"
+                                                            onClick={() => setRegEnabled(!regEnabled)}
+                                                        >
+                                                            <div className={`ai-custom-toggle ${regEnabled ? 'active' : ''}`}>
+                                                                <div className="ai-custom-toggle-handle" />
+                                                            </div>
+                                                            <span className="ai-toggle-label">
+                                                                {regEnabled ? 'Enabled' : 'Disabled'}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ marginBottom: 12 }}>
+                                                        <span style={{ marginRight: 8 }}>Frequency:</span>
+                                                        <Select
+                                                            value={regFrequency}
+                                                            onChange={(val) => setRegFrequency(val)}
+                                                            style={{ width: 140 }}
+                                                            size="small"
+                                                            options={[
+                                                                { value: 'daily', label: 'Daily' },
+                                                                { value: 'weekly', label: 'Weekly' },
+                                                                { value: 'biweekly', label: 'Biweekly' },
+                                                            ]}
+                                                        />
+                                                    </div>
+                                                    {regFrequency !== 'daily' && (
+                                                        <div style={{ marginBottom: 12 }}>
+                                                            <span style={{ marginRight: 8 }}>Day of Week:</span>
+                                                            <Select
+                                                                value={regDayOfWeek}
+                                                                onChange={(val) => setRegDayOfWeek(val)}
+                                                                style={{ width: 140 }}
+                                                                size="small"
+                                                                options={[
+                                                                    { value: 'mon', label: 'Monday' },
+                                                                    { value: 'tue', label: 'Tuesday' },
+                                                                    { value: 'wed', label: 'Wednesday' },
+                                                                    { value: 'thu', label: 'Thursday' },
+                                                                    { value: 'fri', label: 'Friday' },
+                                                                    { value: 'sat', label: 'Saturday' },
+                                                                    { value: 'sun', label: 'Sunday' },
+                                                                ]}
+                                                            />
+                                                        </div>
+                                                    )}
+                                                    <div style={{ marginBottom: 12 }}>
+                                                        <span style={{ marginRight: 8 }}>Hour (UTC):</span>
+                                                        <InputNumber
+                                                            min={0}
+                                                            max={23}
+                                                            value={regHour}
+                                                            onChange={(val) => setRegHour(val ?? 4)}
+                                                            style={{ width: 80 }}
+                                                            size="small"
+                                                        />
+                                                    </div>
+                                                    <div style={{ marginBottom: 12 }}>
+                                                        <span style={{ marginRight: 8 }}>SearXNG URL:</span>
+                                                        <Input
+                                                            value={regSearxngUrl}
+                                                            onChange={(e) => setRegSearxngUrl(e.target.value)}
+                                                            style={{ width: 260 }}
+                                                            size="small"
+                                                            placeholder="http://searxng:8080"
+                                                        />
+                                                    </div>
+                                                    <Space>
+                                                        <Button
+                                                            type="primary"
+                                                            icon={<SaveOutlined />}
+                                                            onClick={saveRegMonitorSettings}
+                                                            loading={savingRegSettings}
+                                                            size="small"
+                                                        >
+                                                            Save
+                                                        </Button>
+                                                        <Button
+                                                            icon={<CloseOutlined />}
+                                                            onClick={cancelRegMonitorEdit}
+                                                            size="small"
+                                                        >
+                                                            Cancel
+                                                        </Button>
+                                                    </Space>
+                                                </div>
+                                            ) : (
+                                                <Descriptions column={1} size="small">
+                                                    <Descriptions.Item label="Schedule">
+                                                        {regMonitorSettings ? (
+                                                            regMonitorSettings.scan_frequency === 'daily'
+                                                                ? `Daily at ${String(regMonitorSettings.scan_hour).padStart(2, '0')}:00 UTC`
+                                                                : regMonitorSettings.scan_frequency === 'weekly'
+                                                                    ? `Weekly on ${(regMonitorSettings.scan_day_of_week || 'mon').charAt(0).toUpperCase() + (regMonitorSettings.scan_day_of_week || 'mon').slice(1)} at ${String(regMonitorSettings.scan_hour).padStart(2, '0')}:00 UTC`
+                                                                    : `Biweekly on ${(regMonitorSettings.scan_day_of_week || 'mon').charAt(0).toUpperCase() + (regMonitorSettings.scan_day_of_week || 'mon').slice(1)} at ${String(regMonitorSettings.scan_hour).padStart(2, '0')}:00 UTC`
+                                                        ) : '-'}
+                                                    </Descriptions.Item>
+                                                    <Descriptions.Item label="Last Scan">
+                                                        {regMonitorSettings?.last_scan_at
+                                                            ? new Date(regMonitorSettings.last_scan_at).toLocaleString()
+                                                            : 'Never'}
+                                                    </Descriptions.Item>
+                                                    <Descriptions.Item label="Last Status">
+                                                        {regScanRuns.length > 0 ? (
+                                                            <Tag color={regScanRuns[0].status === 'completed' ? 'success' : regScanRuns[0].status === 'failed' ? 'error' : 'processing'}>
+                                                                {regScanRuns[0].status.toUpperCase()}
+                                                            </Tag>
+                                                        ) : '-'}
+                                                    </Descriptions.Item>
+                                                    <Descriptions.Item label="Last Findings">
+                                                        {regScanRuns.length > 0 ? `${regScanRuns[0].changes_found} new findings across ${regScanRuns[0].frameworks_scanned} frameworks` : '-'}
+                                                    </Descriptions.Item>
+                                                    <Descriptions.Item label="SearXNG URL">
+                                                        {regMonitorSettings?.searxng_url || '-'}
+                                                    </Descriptions.Item>
+                                                    <Descriptions.Item label="Description">
+                                                        Searches the web for regulatory changes across all frameworks using SearXNG, EUR-Lex, and NIST APIs. Results are saved for LLM analysis on the Framework Updates page.
+                                                    </Descriptions.Item>
+                                                </Descriptions>
+                                            )}
                                         </Card>
                                     )}
                                 </div>

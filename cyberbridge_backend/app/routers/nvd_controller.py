@@ -1,4 +1,5 @@
 # nvd_controller.py
+from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from sqlalchemy.orm import Session
 import logging
@@ -170,7 +171,7 @@ async def trigger_sync(
         raise HTTPException(status_code=500, detail=f"Failed to trigger NVD sync: {str(e)}")
 
 
-@router.get("/sync/status", response_model=schemas.NVDSyncStatusResponse)
+@router.get("/sync/status", response_model=Optional[schemas.NVDSyncStatusResponse])
 async def get_sync_status(
     db: Session = Depends(get_db),
     current_user: schemas.UserBase = Depends(get_current_active_user)
@@ -183,7 +184,7 @@ async def get_sync_status(
         sync_status = nvd_repository.get_latest_sync_status(db)
 
         if not sync_status:
-            raise HTTPException(status_code=404, detail="No sync history found")
+            return None
 
         # Get user email if triggered by a user
         triggered_by_email = None
