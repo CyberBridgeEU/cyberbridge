@@ -1,14 +1,16 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 import logging
 import json
 
 from app.database.database import get_db
 from app.services.llm_service import LLMService
 from app.services.auth_service import get_current_active_user
+from app.services.embedding_service import EmbeddingService
+from app.repositories import embedding_repository
 from app.routers.scanners_controller import get_effective_llm_settings_for_user
 
 logger = logging.getLogger(__name__)
@@ -73,7 +75,9 @@ CyberBridge helps organisations achieve and maintain cybersecurity compliance (e
 - If you don't know something about CyberBridge, say so honestly
 - Keep answers focused on the platform — don't provide general cybersecurity consulting
 - Suggest relevant platform features when users describe compliance challenges
-- Use plain language; avoid unnecessary jargon"""
+- Use plain language; avoid unnecessary jargon
+
+When framework context is provided below, use it to give specific, accurate answers about compliance requirements. Reference the framework name and objective when applicable. If no relevant context is provided, answer based on your general knowledge."""
 
 
 class ChatMessage(BaseModel):
@@ -105,8 +109,28 @@ async def stream_chat(
 
     provider = effective_settings.get("llm_provider", "llamacpp")
 
+    # Build system prompt with RAG context
+    system_prompt = CYBERBRIDGE_SYSTEM_PROMPT
+
+    # Retrieve relevant framework objectives via RAG
+    try:
+        user_messages = [msg.content for msg in request.messages if msg.role == "user"]
+        if user_messages:
+            latest_query = user_messages[-1]
+            embedding_service = EmbeddingService(db)
+            rag_results = embedding_service.retrieve_relevant_objectives(
+                latest_query, current_user.organisation_id, top_k=5
+            )
+            if rag_results:
+                context_block = "\n\n## Retrieved Framework Context\n"
+                for chunk_text, score in rag_results:
+                    context_block += f"\n---\n{chunk_text}\n"
+                system_prompt += context_block
+    except Exception as e:
+        logger.debug(f"RAG retrieval skipped: {e}")
+
     # Build messages list: system prompt + conversation history (last 8 user messages)
-    messages = [{"role": "system", "content": CYBERBRIDGE_SYSTEM_PROMPT}]
+    messages = [{"role": "system", "content": system_prompt}]
     for msg in request.messages[-8:]:
         messages.append({"role": msg.role, "content": msg.content})
 
@@ -131,3 +155,63 @@ async def stream_chat(
             "X-Accel-Buffering": "no"
         }
     )
+
+
+# ==================== Embedding Management Endpoints ====================
+
+class RebuildRequest(BaseModel):
+    framework_id: Optional[str] = None
+
+
+def _rebuild_embeddings(org_id, framework_id=None):
+    """Background task to rebuild embeddings"""
+    from app.database.database import SessionLocal
+    db = SessionLocal()
+    try:
+        service = EmbeddingService(db)
+        if framework_id:
+            service.ingest_framework_objectives(framework_id)
+        else:
+            from app.models import models
+            frameworks = db.query(models.Framework).filter(
+                models.Framework.organisation_id == org_id
+            ).all()
+            for fw in frameworks:
+                try:
+                    service.ingest_framework_objectives(fw.id)
+                except Exception as e:
+                    logger.error(f"Failed to embed framework {fw.name}: {e}")
+    except Exception as e:
+        logger.error(f"Embedding rebuild failed: {e}")
+    finally:
+        db.close()
+
+
+@router.post("/embeddings/rebuild")
+async def rebuild_embeddings(
+    request: RebuildRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_active_user)
+):
+    """Trigger re-embedding for all org frameworks or a single framework. Admin only."""
+    background_tasks.add_task(
+        _rebuild_embeddings,
+        current_user.organisation_id,
+        request.framework_id
+    )
+    return {"status": "rebuild_started", "framework_id": request.framework_id or "all"}
+
+
+@router.get("/embeddings/status")
+def get_embedding_status(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_active_user)
+):
+    """Get embedding counts per framework for the current org."""
+    try:
+        counts = embedding_repository.get_counts_by_org(db, current_user.organisation_id)
+        return {"status": "ok", "frameworks": counts}
+    except Exception as e:
+        logger.error(f"Embedding status error: {e}")
+        return {"status": "error", "message": str(e), "frameworks": {}}

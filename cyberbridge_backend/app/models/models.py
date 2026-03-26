@@ -3,6 +3,7 @@ from sqlalchemy import Column, String, Boolean, Float, ForeignKey, Integer, Date
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.hybrid import hybrid_property
+from pgvector.sqlalchemy import Vector
 from ..database.database import Base
 import uuid
 import json
@@ -2596,3 +2597,19 @@ class SubmissionEmailConfig(Base):
     is_default = Column(Boolean, default=False)  # True = system default, False = user-added
     created_by_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=func.now())
+
+
+# ===========================
+# RAG Embedding Models
+# ===========================
+
+class ObjectiveEmbedding(Base):
+    __tablename__ = "objective_embeddings"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    objective_id = Column(UUID(as_uuid=True), ForeignKey("objectives.id", ondelete="CASCADE"), nullable=False, unique=True)
+    framework_id = Column(UUID(as_uuid=True), ForeignKey("frameworks.id", ondelete="CASCADE"), nullable=False)
+    chunk_text = Column(Text, nullable=False)
+    embedding = Column(Vector(384), nullable=False)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())

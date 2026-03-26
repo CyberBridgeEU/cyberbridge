@@ -1,5 +1,5 @@
 # routers/frameworks_controller.py
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status, UploadFile, File, Form
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -192,8 +192,22 @@ def get_framework_templates(db: Session = Depends(get_db), current_user: schemas
 
     return filtered_templates
 
+def _ingest_framework_embeddings(framework_id):
+    """Background task to generate embeddings for a newly seeded framework."""
+    from app.database.database import SessionLocal
+    from app.services.embedding_service import EmbeddingService
+    db = SessionLocal()
+    try:
+        service = EmbeddingService(db)
+        service.ingest_framework_objectives(framework_id)
+    except Exception as e:
+        logger.warning(f"Embedding ingestion failed for framework {framework_id} (non-blocking): {e}")
+    finally:
+        db.close()
+
+
 @router.post("/seed-template", response_model=schemas.FrameworkResponse)
-def seed_framework_template(template_id: str, wire_connections: bool = True, db: Session = Depends(get_db), current_user: schemas.UserBase = Depends(get_current_active_user)):
+def seed_framework_template(template_id: str, background_tasks: BackgroundTasks, wire_connections: bool = True, db: Session = Depends(get_db), current_user: schemas.UserBase = Depends(get_current_active_user)):
     """Seed a framework template for the current user's organization"""
     try:
         logger.info(f"=== SEED FRAMEWORK TEMPLATE CALLED: template_id={template_id} ===")
@@ -316,6 +330,9 @@ def seed_framework_template(template_id: str, wire_connections: bool = True, db:
                     status_code=500,
                     detail=f"Error loading custom framework template: {str(e)}"
                 )
+
+        # Trigger embedding ingestion in the background (non-blocking)
+        background_tasks.add_task(_ingest_framework_embeddings, framework.id)
 
         return schemas.FrameworkResponse(
             id=framework.id,

@@ -20,9 +20,9 @@ LOG_FILE="/tmp/cyberbridge_install.log"
 
 # Service configuration
 NETWORK_NAME="cyberbridge-network"
-CONTAINERS=(cyberbridge_db cyberbridge_zap cyberbridge_nmap cyberbridge_osv cyberbridge_semgrep cyberbridge_syft cyberbridge_llamacpp cyberbridge_backend cyberbridge_frontend cyberbridge_cti_service cyberbridge_darkweb_redis cyberbridge_darkweb_scanner)
-PORTS=(5433 8010 8011 8012 8013 8014 11435 5174 5173 8020 6382 8030)
-PORT_LABELS=("PostgreSQL DB" "ZAP Proxy" "Nmap Scanner" "OSV Scanner" "Semgrep" "Syft SBOM" "llama.cpp LLM" "Backend API" "Frontend" "CTI Service" "Redis DarkWeb" "Dark Web Scanner")
+CONTAINERS=(cyberbridge_db cyberbridge_zap cyberbridge_nmap cyberbridge_osv cyberbridge_semgrep cyberbridge_syft cyberbridge_llamacpp cyberbridge_embeddings cyberbridge_backend cyberbridge_frontend cyberbridge_cti_service cyberbridge_darkweb_redis cyberbridge_darkweb_scanner)
+PORTS=(5433 8010 8011 8012 8013 8014 11435 8016 5174 5173 8020 6382 8030)
+PORT_LABELS=("PostgreSQL DB" "ZAP Proxy" "Nmap Scanner" "OSV Scanner" "Semgrep" "Syft SBOM" "llama.cpp LLM" "Embeddings" "Backend API" "Frontend" "CTI Service" "Redis DarkWeb" "Dark Web Scanner")
 
 MIN_DISK_GB=40
 MIN_RAM_GB=16
@@ -582,6 +582,7 @@ deploy_direct() {
     else
         log_info "Skipping LLM build (--skip-llm)"
     fi
+    build_image "embeddings" "./embeddings" ""
     build_image "cyberbridge_backend"  "./cyberbridge_backend" "" "--build-arg API_BASE_URL_PROD=${API_BASE_URL}"
     build_image "cyberbridge_frontend" "./cyberbridge_frontend" "" "--build-arg VITE_PRODUCTION_IP=${VITE_PRODUCTION_IP} --build-arg VITE_BACKEND_PORT=${VITE_BACKEND_PORT}"
 
@@ -634,9 +635,14 @@ deploy_direct() {
         wait_for_container "cyberbridge_llamacpp" "curl -sf http://localhost:11435/health 2>/dev/null" 120
     fi
 
+    # Embeddings service
+    run_container "cyberbridge_embeddings" \
+        "-d --name cyberbridge_embeddings --network ${NETWORK_NAME} -p 8016:8000 --memory=1g --restart unless-stopped embeddings"
+    wait_for_container "cyberbridge_embeddings" "curl -sf http://localhost:8000/health 2>/dev/null" 60
+
     # Tier 4: Backend
     run_container "cyberbridge_backend" \
-        "-d --name cyberbridge_backend --network ${NETWORK_NAME} -p 5174:8000 -e CONTAINER_ENV=docker -e DB_HOST=cyberbridge_db -e DB_PORT=5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=postgres -e NMAP_SERVICE_URL=http://nmap:8000 -e SEMGREP_SERVICE_URL=http://semgrep:8000 -e OSV_SERVICE_URL=http://osv:8000 -e ZAP_SERVICE_URL=http://zap:8000 -e SYFT_SERVICE_URL=http://syft:8000 -e SECRET_KEY=${JWT_SECRET} --restart on-failure cyberbridge_backend"
+        "-d --name cyberbridge_backend --network ${NETWORK_NAME} -p 5174:8000 -e CONTAINER_ENV=docker -e DB_HOST=cyberbridge_db -e DB_PORT=5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=postgres -e NMAP_SERVICE_URL=http://nmap:8000 -e SEMGREP_SERVICE_URL=http://semgrep:8000 -e OSV_SERVICE_URL=http://osv:8000 -e ZAP_SERVICE_URL=http://zap:8000 -e SYFT_SERVICE_URL=http://syft:8000 -e EMBEDDINGS_SERVICE_URL=http://embeddings:8000 -e SECRET_KEY=${JWT_SECRET} --restart on-failure cyberbridge_backend"
     wait_for_container "cyberbridge_backend" "curl -f http://localhost:8000/docs 2>/dev/null" 60
 
     # Tier 5: Frontend

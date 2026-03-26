@@ -2092,7 +2092,7 @@ Guidelines:
                     "POST",
                     self.llamacpp_url,
                     json=payload,
-                    timeout=120
+                    timeout=httpx.Timeout(connect=30, read=300, write=30, pool=30)
                 ) as response:
                     response.raise_for_status()
                     async for line in response.aiter_lines():

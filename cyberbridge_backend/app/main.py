@@ -23,6 +23,12 @@ logger = logging.getLogger(__name__)
 metadata = Base.metadata
 logger.info(f"Attempting to create the following tables: {', '.join(metadata.tables.keys())}")
 
+# Ensure pgvector extension exists (handles existing deployments where init script won't re-run)
+from sqlalchemy import text as sa_text
+with engine.connect() as conn:
+    conn.execute(sa_text("CREATE EXTENSION IF NOT EXISTS vector"))
+    conn.commit()
+
 # Create tables
 Base.metadata.create_all(bind=engine)
 

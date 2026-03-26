@@ -1,4 +1,7 @@
-FROM postgres:16
+FROM pgvector/pgvector:pg16
+
+# Copy pgvector init script
+COPY init-pgvector.sql /docker-entrypoint-initdb.d/01-pgvector.sql
 
 # Set environment variables
 ENV POSTGRES_DB=postgres
