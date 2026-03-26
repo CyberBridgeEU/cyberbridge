@@ -2864,3 +2864,12 @@ class EmailConfigResponse(BaseModel):
     authority_name: str
     email: str
     is_default: bool
+
+
+# Compliance Roadmap schemas
+class RoadmapRequest(BaseModel):
+    framework_id: str
+
+class RoadmapBulkRequest(BaseModel):
+    framework_id: str
+    objective_ids: List[str]

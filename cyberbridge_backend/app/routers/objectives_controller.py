@@ -13,6 +13,7 @@ from ..database.database import get_db
 from ..models import models
 from ..services.auth_service import get_current_active_user
 from ..services import objectives_ai_service
+from ..services.roadmap_service import RoadmapService
 
 router = APIRouter(prefix="/objectives", tags=["objectives"], responses={404: {"description": "Not found"}})
 
@@ -293,6 +294,59 @@ async def analyze_objectives_with_ai(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An error occurred during AI analysis: {str(e)}"
+        )
+
+
+@router.post("/roadmap/{objective_id}")
+async def generate_objective_roadmap(
+    objective_id: str,
+    request: schemas.RoadmapRequest,
+    db: Session = Depends(get_db),
+    current_user: schemas.UserBase = Depends(get_current_active_user)
+):
+    """Generate an AI-powered compliance roadmap for a single objective."""
+    try:
+        obj_uuid = uuid.UUID(objective_id)
+        framework_uuid = uuid.UUID(request.framework_id)
+
+        service = RoadmapService(db, current_user)
+        result = await service.generate_roadmap(obj_uuid, framework_uuid)
+        return result
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid ID format: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate roadmap: {str(e)}"
+        )
+
+
+@router.post("/roadmap/bulk")
+async def generate_bulk_roadmap(
+    request: schemas.RoadmapBulkRequest,
+    db: Session = Depends(get_db),
+    current_user: schemas.UserBase = Depends(get_current_active_user)
+):
+    """Generate AI-powered compliance roadmaps for multiple objectives."""
+    try:
+        framework_uuid = uuid.UUID(request.framework_id)
+        objective_uuids = [uuid.UUID(oid) for oid in request.objective_ids]
+
+        service = RoadmapService(db, current_user)
+        result = await service.generate_roadmap_bulk(framework_uuid, objective_uuids)
+        return result
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid ID format: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate bulk roadmap: {str(e)}"
         )
 
 

@@ -3,9 +3,11 @@ import {
     BarChartOutlined, AimOutlined, CheckCircleOutlined, FormOutlined,
     SafetyCertificateOutlined, DownloadOutlined, ExclamationCircleOutlined,
     FileSearchOutlined, CloseCircleOutlined, LinkOutlined, HistoryOutlined,
-    DeleteOutlined
+    DeleteOutlined, CompassOutlined, LoadingOutlined, ThunderboltOutlined,
+    ClockCircleOutlined, WarningOutlined, ToolOutlined, CodeOutlined,
+    FileTextOutlined, ReadOutlined
 } from '@ant-design/icons';
-import { Progress, Spin, Select, Collapse, Table, Modal, Tag, Tooltip, message } from 'antd';
+import { Progress, Spin, Select, Collapse, Table, Modal, Tag, Tooltip, message, Button, Steps, Alert, Divider, Typography } from 'antd';
 import Sidebar from "../components/Sidebar.tsx";
 import { useLocation } from 'wouter';
 import { useMenuHighlighting } from "../utils/menuUtils.ts";
@@ -15,6 +17,8 @@ import useFrameworksStore from "../store/useFrameworksStore.ts";
 import useCRAFilteredFrameworks from "../hooks/useCRAFilteredFrameworks.ts";
 import { cyberbridge_back_end_rest_api } from "../constants/urls.ts";
 import { exportToPdf } from "../utils/pdfUtils.ts";
+import useRoadmapStore from "../store/useRoadmapStore.ts";
+import type { RoadmapData, RoadmapActionStep } from "../store/useRoadmapStore.ts";
 
 interface GapAnalysisData {
     summary: {
@@ -127,6 +131,10 @@ const GapAnalysisPage = () => {
     const [certificates, setCertificates] = useState<Certificate[]>([]);
     const [showCertHistory, setShowCertHistory] = useState(false);
     const [revokingId, setRevokingId] = useState<string | null>(null);
+
+    // Bulk roadmap state
+    const [showBulkRoadmap, setShowBulkRoadmap] = useState(false);
+    const { bulkRoadmaps, bulkLoading, error: roadmapError, generateBulkRoadmap, clearBulkRoadmaps } = useRoadmapStore();
 
     const userRole = getUserRole();
     const isAdmin = userRole === 'org_admin' || userRole === 'super_admin';
@@ -715,6 +723,27 @@ const GapAnalysisPage = () => {
 
                             {/* Section 6: Identified Gaps */}
                             <DashboardSection title="Identified Gaps" style={{ marginTop: '24px' }}>
+                                {data.gaps.objectives_not_compliant.length > 0 && (
+                                    <div style={{ marginBottom: '16px' }}>
+                                        <Button
+                                            type="primary"
+                                            icon={bulkLoading ? <LoadingOutlined spin /> : <CompassOutlined />}
+                                            loading={bulkLoading}
+                                            onClick={async () => {
+                                                if (!selectedFrameworkId) return;
+                                                const ids = data.gaps.objectives_not_compliant.map(g => g.id);
+                                                setShowBulkRoadmap(true);
+                                                await generateBulkRoadmap(selectedFrameworkId, ids.slice(0, 10));
+                                            }}
+                                            style={{ backgroundColor: '#0f386a', borderColor: '#0f386a' }}
+                                        >
+                                            Generate Roadmaps for Non-Compliant Objectives
+                                        </Button>
+                                        <span style={{ marginLeft: 12, fontSize: '12px', color: '#8c8c8c' }}>
+                                            (up to 10 objectives)
+                                        </span>
+                                    </div>
+                                )}
                                 <Collapse
                                     bordered={false}
                                     style={{ backgroundColor: '#fafafa', borderRadius: '8px' }}
@@ -817,6 +846,130 @@ const GapAnalysisPage = () => {
                     ) : null}
                 </div>
             </div>
+
+            {/* Bulk Roadmap Modal */}
+            <Modal
+                title={
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <CompassOutlined style={{ color: '#0f386a' }} />
+                        <span>Compliance Roadmaps</span>
+                    </div>
+                }
+                open={showBulkRoadmap}
+                onCancel={() => { setShowBulkRoadmap(false); clearBulkRoadmaps(); }}
+                footer={null}
+                width={800}
+                styles={{ body: { maxHeight: '70vh', overflowY: 'auto' } }}
+            >
+                {bulkLoading && (
+                    <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+                        <Spin indicator={<LoadingOutlined style={{ fontSize: 36 }} spin />} />
+                        <div style={{ marginTop: 20, color: '#8c8c8c', fontSize: '15px' }}>
+                            Generating compliance roadmaps...
+                        </div>
+                        <div style={{ marginTop: 8, color: '#bfbfbf', fontSize: '13px' }}>
+                            This may take a few minutes depending on the number of objectives
+                        </div>
+                    </div>
+                )}
+                {roadmapError && !bulkLoading && (
+                    <Alert message="Error" description={roadmapError} type="error" showIcon style={{ marginBottom: 16 }} />
+                )}
+                {!bulkLoading && bulkRoadmaps.length > 0 && (
+                    <Collapse
+                        accordion
+                        style={{ backgroundColor: '#fafafa' }}
+                        items={bulkRoadmaps.map((rm, idx) => ({
+                            key: rm.objective_id,
+                            label: (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontWeight: 600 }}>{idx + 1}. {rm.objective_title}</span>
+                                    <div style={{ display: 'flex', gap: 6 }}>
+                                        <Tag color="red">{rm.current_status}</Tag>
+                                        <Tag color="default">{rm.action_steps.length} steps</Tag>
+                                        <Tag icon={<ClockCircleOutlined />}>{rm.estimated_total_effort}</Tag>
+                                    </div>
+                                </div>
+                            ),
+                            children: (
+                                <div>
+                                    <div style={{
+                                        padding: '10px 14px', backgroundColor: '#fff7e6',
+                                        border: '1px solid #ffd591', borderRadius: '6px', marginBottom: 14
+                                    }}>
+                                        <Typography.Text strong style={{ color: '#d46b08' }}>
+                                            <WarningOutlined style={{ marginRight: 6 }} />Gap Summary
+                                        </Typography.Text>
+                                        <Typography.Paragraph style={{ margin: '6px 0 0 0', fontSize: '13px' }}>
+                                            {rm.gap_summary}
+                                        </Typography.Paragraph>
+                                    </div>
+                                    {rm.quick_wins && rm.quick_wins.length > 0 && (
+                                        <div style={{ marginBottom: 14 }}>
+                                            <Typography.Text strong style={{ fontSize: '13px' }}>
+                                                <ThunderboltOutlined style={{ color: '#52c41a', marginRight: 6 }} />Quick Wins
+                                            </Typography.Text>
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
+                                                {rm.quick_wins.map((w, i) => (
+                                                    <Tag key={i} color="green" style={{ fontSize: '12px' }}>{w}</Tag>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                    <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: '13px' }}>
+                                        Action Steps
+                                    </Typography.Text>
+                                    {rm.action_steps.map((step) => (
+                                        <div key={step.step_number} style={{
+                                            padding: '10px 12px', marginBottom: 8,
+                                            backgroundColor: '#fff', borderRadius: '6px', border: '1px solid #f0f0f0'
+                                        }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                                                <span style={{
+                                                    width: 22, height: 22, borderRadius: '50%', backgroundColor: '#0f386a',
+                                                    color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                                    fontSize: '11px', fontWeight: 700, flexShrink: 0
+                                                }}>{step.step_number}</span>
+                                                <Typography.Text strong style={{ fontSize: '13px' }}>{step.title}</Typography.Text>
+                                            </div>
+                                            <Typography.Paragraph style={{ margin: '0 0 8px 30px', fontSize: '13px', color: '#595959' }}>
+                                                {step.description}
+                                            </Typography.Paragraph>
+                                            <div style={{ marginLeft: 30, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                                                <Tag color={step.priority === 'critical' ? 'red' : step.priority === 'high' ? 'volcano' : step.priority === 'medium' ? 'orange' : 'blue'}>
+                                                    {step.priority}
+                                                </Tag>
+                                                <Tag>{step.estimated_effort}</Tag>
+                                                <Tag color={step.category === 'technical' ? 'geekblue' : step.category === 'policy' ? 'purple' : step.category === 'evidence' ? 'cyan' : 'gold'}>
+                                                    {step.category}
+                                                </Tag>
+                                            </div>
+                                            {step.platform_action && (
+                                                <div style={{
+                                                    marginTop: 8, marginLeft: 30, padding: '6px 10px',
+                                                    backgroundColor: '#f0f5ff', borderRadius: '4px', fontSize: '12px',
+                                                    borderLeft: '2px solid #1890ff'
+                                                }}>
+                                                    <ToolOutlined style={{ marginRight: 4, color: '#1890ff' }} />
+                                                    {step.platform_action}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                    {rm.risk_if_unaddressed && (
+                                        <Alert message="Risk if Unaddressed" description={rm.risk_if_unaddressed} type="warning" showIcon style={{ marginTop: 12 }} />
+                                    )}
+                                </div>
+                            ),
+                        }))}
+                    />
+                )}
+                {!bulkLoading && bulkRoadmaps.length === 0 && !roadmapError && (
+                    <div style={{ textAlign: 'center', padding: '40px', color: '#8c8c8c' }}>
+                        No roadmaps generated yet.
+                    </div>
+                )}
+            </Modal>
 
             {/* Certificate History Modal */}
             <Modal

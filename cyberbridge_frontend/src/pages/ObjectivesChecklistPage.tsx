@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Table, Select, Card, Typography, Spin, Alert, notification, Tag, Button, Upload, Tooltip, Popconfirm } from 'antd';
-import { CheckCircleOutlined, RobotOutlined, LoadingOutlined, CheckOutlined, CloseOutlined, UploadOutlined, PaperClipOutlined, DeleteOutlined } from '@ant-design/icons';
+import { CheckCircleOutlined, RobotOutlined, LoadingOutlined, CheckOutlined, CloseOutlined, UploadOutlined, PaperClipOutlined, DeleteOutlined, CompassOutlined } from '@ant-design/icons';
 import Sidebar from '../components/Sidebar.tsx';
 import useObjectiveStore from '../store/useObjectiveStore.ts';
 import type { ChecklistPolicy } from '../store/useObjectiveStore.ts';
@@ -20,6 +20,7 @@ import ScrollToTopButton from '../components/ScrollToTopButton.tsx';
 import { cyberbridge_back_end_rest_api } from "../constants/urls.ts";
 import useCRAFilteredFrameworks from "../hooks/useCRAFilteredFrameworks.ts";
 import useCRAModeStore from "../store/useCRAModeStore.ts";
+import ComplianceRoadmapDrawer from '../components/ComplianceRoadmapDrawer.tsx';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -43,6 +44,12 @@ const ObjectivesChecklistPage: React.FC = () => {
     const [selectedFrameworkId, setSelectedFrameworkId] = useState<string | null>(null);
     const [api, contextHolder] = notification.useNotification();
     const [applyingSuggestionId, setApplyingSuggestionId] = useState<string | null>(null);
+
+    // Roadmap drawer state
+    const [roadmapDrawerOpen, setRoadmapDrawerOpen] = useState(false);
+    const [roadmapObjectiveId, setRoadmapObjectiveId] = useState<string | null>(null);
+    const [roadmapObjectiveTitle, setRoadmapObjectiveTitle] = useState('');
+    const [roadmapCurrentStatus, setRoadmapCurrentStatus] = useState<string | null>(null);
 
     // Scope-related state
     const [scopeTypes, setScopeTypes] = useState<Array<{id: string, scope_name: string}>>([]);
@@ -696,6 +703,27 @@ const ObjectivesChecklistPage: React.FC = () => {
                 </Select>
             ),
         },
+        {
+            title: '',
+            key: 'roadmap',
+            width: '5%',
+            render: (_: any, record: ObjectiveTableData) => (
+                <Tooltip title="Generate Compliance Roadmap">
+                    <Button
+                        type="text"
+                        size="small"
+                        icon={<CompassOutlined />}
+                        onClick={() => {
+                            setRoadmapObjectiveId(record.key);
+                            setRoadmapObjectiveTitle(record.title);
+                            setRoadmapCurrentStatus(record.compliance_status);
+                            setRoadmapDrawerOpen(true);
+                        }}
+                        style={{ color: '#0f386a' }}
+                    />
+                </Tooltip>
+            ),
+        },
     ];
 
     if (error) {
@@ -1148,6 +1176,16 @@ const ObjectivesChecklistPage: React.FC = () => {
                     )}
                 </div>
             </div>
+
+            {/* Compliance Roadmap Drawer */}
+            <ComplianceRoadmapDrawer
+                open={roadmapDrawerOpen}
+                onClose={() => { setRoadmapDrawerOpen(false); setRoadmapObjectiveId(null); }}
+                objectiveId={roadmapObjectiveId}
+                objectiveTitle={roadmapObjectiveTitle}
+                frameworkId={selectedFrameworkId || ''}
+                currentStatus={roadmapCurrentStatus}
+            />
         </div>
     );
 };
