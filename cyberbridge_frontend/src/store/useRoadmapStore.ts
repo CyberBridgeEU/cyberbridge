@@ -49,6 +49,7 @@ interface UseRoadmapStore {
 
     generateRoadmap: (objectiveId: string, frameworkId: string) => Promise<RoadmapData | null>;
     generateBulkRoadmap: (frameworkId: string, objectiveIds: string[]) => Promise<RoadmapData[]>;
+    cancelRoadmap: () => Promise<void>;
     clearRoadmap: () => void;
     clearBulkRoadmaps: () => void;
 }
@@ -173,9 +174,24 @@ const useRoadmapStore = create<UseRoadmapStore>((set, get) => ({
         }
     },
 
-    clearRoadmap: () => {
+    cancelRoadmap: async () => {
+        // Abort the fetch
         const controller = get().abortController;
         if (controller) controller.abort();
+        // Tell the backend to cancel the LLM task
+        try {
+            await fetch(`${cyberbridge_back_end_rest_api}/scanners/cancel-llm`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...useAuthStore.getState().getAuthHeader()
+                }
+            });
+        } catch (_) { /* ignore */ }
+        set({ roadmap: null, error: null, loading: false, abortController: null });
+    },
+
+    clearRoadmap: () => {
         set({ roadmap: null, error: null, loading: false, abortController: null });
     },
 

@@ -59,7 +59,7 @@ const ComplianceRoadmapDrawer: React.FC<ComplianceRoadmapDrawerProps> = ({
     frameworkId,
     currentStatus,
 }) => {
-    const { roadmap, loading, error, generateRoadmap, clearRoadmap } = useRoadmapStore();
+    const { roadmap, loading, error, generateRoadmap, cancelRoadmap, clearRoadmap } = useRoadmapStore();
 
     useEffect(() => {
         if (open && objectiveId && frameworkId) {
@@ -71,7 +71,11 @@ const ComplianceRoadmapDrawer: React.FC<ComplianceRoadmapDrawerProps> = ({
     }, [open, objectiveId, frameworkId]);
 
     const handleClose = () => {
-        clearRoadmap();
+        if (loading) {
+            cancelRoadmap();
+        } else {
+            clearRoadmap();
+        }
         onClose();
     };
 

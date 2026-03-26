@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import List
+import asyncio
 import uuid
 import os
 import shutil
@@ -14,6 +15,7 @@ from ..models import models
 from ..services.auth_service import get_current_active_user
 from ..services import objectives_ai_service
 from ..services.roadmap_service import RoadmapService
+from ..utils.cancellation import register_task, unregister_task
 
 router = APIRouter(prefix="/objectives", tags=["objectives"], responses={404: {"description": "Not found"}})
 
@@ -310,7 +312,18 @@ async def generate_objective_roadmap(
         framework_uuid = uuid.UUID(request.framework_id)
 
         service = RoadmapService(db, current_user)
-        result = await service.generate_roadmap(obj_uuid, framework_uuid)
+        user_id = str(current_user.id)
+
+        # Register task so /scanners/cancel-llm can cancel it
+        llm_task = asyncio.ensure_future(service.generate_roadmap(obj_uuid, framework_uuid))
+        register_task(user_id, llm_task)
+        try:
+            result = await llm_task
+        except asyncio.CancelledError:
+            return {"success": False, "error": "Cancelled"}
+        finally:
+            unregister_task(user_id)
+
         return result
     except ValueError as e:
         raise HTTPException(
