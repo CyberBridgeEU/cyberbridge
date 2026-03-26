@@ -2562,3 +2562,35 @@ class ComplianceCertificate(Base):
     pdf_data = Column(LargeBinary, nullable=True)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+
+class CertificateSubmission(Base):
+    __tablename__ = "certificate_submissions"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    certificate_id = Column(UUID(as_uuid=True), ForeignKey("compliance_certificates.id"), nullable=False)
+    organisation_id = Column(UUID(as_uuid=True), ForeignKey("organisations.id"), nullable=False)
+    submitted_by_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    authority_name = Column(String(255), nullable=False)  # e.g. "ENISA", "National CSIRT", custom
+    recipient_emails = Column(Text, nullable=False)  # JSON array of email addresses
+    submission_method = Column(String(50), nullable=False, default="email")  # email, portal
+    status = Column(String(50), nullable=False, default="draft")  # draft, sent, acknowledged, feedback_received
+    subject = Column(Text, nullable=True)
+    body = Column(Text, nullable=True)
+    feedback = Column(Text, nullable=True)
+    feedback_received_at = Column(DateTime, nullable=True)
+    sent_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+
+class SubmissionEmailConfig(Base):
+    __tablename__ = "submission_email_configs"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organisation_id = Column(UUID(as_uuid=True), ForeignKey("organisations.id"), nullable=False)
+    authority_name = Column(String(255), nullable=False)
+    email = Column(String(255), nullable=False)
+    is_default = Column(Boolean, default=False)  # True = system default, False = user-added
+    created_by_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime, default=func.now())

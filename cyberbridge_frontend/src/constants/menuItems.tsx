@@ -45,6 +45,7 @@ import {
     NodeIndexOutlined,
     ThunderboltOutlined,
     RobotOutlined,
+    SendOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { Badge } from 'antd';
@@ -384,6 +385,20 @@ export const MenuItems = () => {
             ]
         });
 
+        // Gap Analysis (standalone, above Compliance Chain)
+        items.push({
+            key: 'gap-analysis',
+            label: <Link href="/gap_analysis">Gap Analysis</Link>,
+            icon: <BarChartOutlined />
+        });
+
+        // Regulatory Submissions (standalone, above Compliance Chain)
+        items.push({
+            key: 'regulatory-submissions',
+            label: <Link href="/regulatory_submissions">Regulatory Submissions</Link>,
+            icon: <SendOutlined />
+        });
+
         // Compliance Chain
         items.push({
             key: 'compliance-chain',
@@ -399,11 +414,6 @@ export const MenuItems = () => {
                     key: 'compliance-chain.map',
                     label: <Link href="/compliance_chain_map">Map</Link>,
                     icon: <PartitionOutlined />
-                },
-                {
-                    key: 'compliance-chain.gap-analysis',
-                    label: <Link href="/gap_analysis">Gap Analysis</Link>,
-                    icon: <BarChartOutlined />
                 }
             ]
         });
@@ -810,7 +820,21 @@ export const MenuItems = () => {
         ]
     });
 
-    // 6.5. Compliance Chain with All Links and Map submenu
+    // 6.5. Gap Analysis (standalone, above Compliance Chain)
+    items.push({
+        key: 'gap-analysis',
+        label: <Link href="/gap_analysis">Gap Analysis</Link>,
+        icon: <BarChartOutlined />
+    });
+
+    // 6.6. Regulatory Submissions (standalone, above Compliance Chain)
+    items.push({
+        key: 'regulatory-submissions',
+        label: <Link href="/regulatory_submissions">Regulatory Submissions</Link>,
+        icon: <SendOutlined />
+    });
+
+    // 6.7. Compliance Chain with All Links and Map submenu
     items.push({
         key: 'compliance-chain',
         label: 'Compliance Chain',
@@ -825,11 +849,6 @@ export const MenuItems = () => {
                 key: 'compliance-chain.map',
                 label: <Link href="/compliance_chain_map">Map</Link>,
                 icon: <PartitionOutlined />
-            },
-            {
-                key: 'compliance-chain.gap-analysis',
-                label: <Link href="/gap_analysis">Gap Analysis</Link>,
-                icon: <BarChartOutlined />
             }
         ]
     });

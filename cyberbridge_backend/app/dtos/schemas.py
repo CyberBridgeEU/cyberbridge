@@ -2819,3 +2819,45 @@ class CertificateVerifyResponse(BaseModel):
     issued_at: datetime
     expires_at: datetime
     is_valid: bool
+
+
+# ===========================
+# Regulatory Submission Schemas
+# ===========================
+
+class SubmissionCreateRequest(BaseModel):
+    certificate_id: uuid.UUID
+    authority_name: str
+    recipient_emails: List[str]
+    subject: Optional[str] = None
+    body: Optional[str] = None
+
+class SubmissionUpdateFeedbackRequest(BaseModel):
+    feedback: str
+
+class SubmissionResponse(BaseModel):
+    id: uuid.UUID
+    certificate_id: uuid.UUID
+    certificate_number: str
+    framework_name: str
+    authority_name: str
+    recipient_emails: List[str]
+    submission_method: str
+    status: str
+    subject: Optional[str] = None
+    body: Optional[str] = None
+    feedback: Optional[str] = None
+    feedback_received_at: Optional[datetime] = None
+    sent_at: Optional[datetime] = None
+    submitted_by_name: Optional[str] = None
+    created_at: datetime
+
+class EmailConfigCreateRequest(BaseModel):
+    authority_name: str
+    email: str
+
+class EmailConfigResponse(BaseModel):
+    id: uuid.UUID
+    authority_name: str
+    email: str
+    is_default: bool

@@ -100,6 +100,16 @@ const routeToMenuMapping: Record<string, MenuHighlighting> = {
     selectedKeys: ['documents.eu_doc'],
     openKeys: ['documents']
   },
+  // Gap Analysis (standalone)
+  '/gap_analysis': {
+    selectedKeys: ['gap-analysis'],
+    openKeys: []
+  },
+  // Regulatory Submissions (standalone)
+  '/regulatory_submissions': {
+    selectedKeys: ['regulatory-submissions'],
+    openKeys: []
+  },
   // Compliance Chain submenu
   '/compliance_chain_links': {
     selectedKeys: ['compliance-chain.links'],
@@ -107,10 +117,6 @@ const routeToMenuMapping: Record<string, MenuHighlighting> = {
   },
   '/compliance_chain_map': {
     selectedKeys: ['compliance-chain.map'],
-    openKeys: ['compliance-chain']
-  },
-  '/gap_analysis': {
-    selectedKeys: ['compliance-chain.gap-analysis'],
     openKeys: ['compliance-chain']
   },
   // Monitoring submenu

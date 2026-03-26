@@ -62,6 +62,7 @@ import DependencyPolicyPage from "./pages/DependencyPolicyPage.tsx"
 import CEMarkingChecklistPage from "./pages/CEMarkingChecklistPage.tsx"
 import SecurityAdvisoriesPage from "./pages/SecurityAdvisoriesPage.tsx";
 import GapAnalysisPage from "./pages/GapAnalysisPage.tsx";
+import RegulatorySubmissionPage from "./pages/RegulatorySubmissionPage.tsx";
 import DarkWebDashboardPage from "./pages/DarkWebDashboardPage.tsx";
 import DarkWebScansPage from "./pages/DarkWebScansPage.tsx";
 import DarkWebScanDetailPage from "./pages/DarkWebScanDetailPage.tsx";
@@ -215,6 +216,12 @@ function App() {
                     <Route path="/gap_analysis">
                         <ProtectedRoute>
                             <GapAnalysisPage />
+                        </ProtectedRoute>
+                    </Route>
+
+                    <Route path="/regulatory_submissions">
+                        <ProtectedRoute>
+                            <RegulatorySubmissionPage />
                         </ProtectedRoute>
                     </Route>
 
