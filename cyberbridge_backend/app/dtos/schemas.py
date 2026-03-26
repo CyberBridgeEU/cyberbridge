@@ -2784,3 +2784,38 @@ class AssessmentAnswerSuggestionResponse(BaseModel):
     assessment_id: str
     total_questions: int        # Total unanswered questions examined
     total_suggestions: int
+
+
+# ===========================
+# Compliance Certificate Schemas
+# ===========================
+
+class CertificateGenerateRequest(BaseModel):
+    framework_id: uuid.UUID
+
+class CertificateRevokeRequest(BaseModel):
+    reason: str
+
+class CertificateResponse(BaseModel):
+    id: uuid.UUID
+    certificate_number: str
+    framework_name: str
+    organisation_name: str
+    overall_score: float
+    objectives_compliant_pct: float
+    assessments_completed_pct: float
+    policies_approved_pct: float
+    issued_at: datetime
+    expires_at: datetime
+    revoked: bool
+    revoked_at: Optional[datetime] = None
+    revoked_reason: Optional[str] = None
+    verification_hash: str
+
+class CertificateVerifyResponse(BaseModel):
+    certificate_number: str
+    organisation_name: str
+    framework_name: str
+    issued_at: datetime
+    expires_at: datetime
+    is_valid: bool

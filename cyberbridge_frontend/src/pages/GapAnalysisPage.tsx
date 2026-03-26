@@ -2,9 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import {
     BarChartOutlined, AimOutlined, CheckCircleOutlined, FormOutlined,
     SafetyCertificateOutlined, DownloadOutlined, ExclamationCircleOutlined,
-    FileSearchOutlined, CloseCircleOutlined, LinkOutlined
+    FileSearchOutlined, CloseCircleOutlined, LinkOutlined, HistoryOutlined,
+    DeleteOutlined
 } from '@ant-design/icons';
-import { Progress, Spin, Select, Collapse, Table } from 'antd';
+import { Progress, Spin, Select, Collapse, Table, Modal, Tag, Tooltip, message } from 'antd';
 import Sidebar from "../components/Sidebar.tsx";
 import { useLocation } from 'wouter';
 import { useMenuHighlighting } from "../utils/menuUtils.ts";
@@ -68,6 +69,23 @@ interface GapAnalysisData {
     }[];
 }
 
+interface Certificate {
+    id: string;
+    certificate_number: string;
+    framework_name: string;
+    organisation_name: string;
+    overall_score: number;
+    objectives_compliant_pct: number;
+    assessments_completed_pct: number;
+    policies_approved_pct: number;
+    issued_at: string;
+    expires_at: string;
+    revoked: boolean;
+    revoked_at: string | null;
+    revoked_reason: string | null;
+    verification_hash: string;
+}
+
 const statusRows: { key: string; label: string; color: string }[] = [
     { key: 'compliant', label: 'Compliant', color: '#52c41a' },
     { key: 'partially_compliant', label: 'Partially Compliant', color: '#faad14' },
@@ -94,6 +112,7 @@ const GapAnalysisPage = () => {
     const [location] = useLocation();
     const menuHighlighting = useMenuHighlighting(location);
     const getAuthHeader = useAuthStore((s) => s.getAuthHeader);
+    const getUserRole = useAuthStore((s) => s.getUserRole);
     const { fetchFrameworks } = useFrameworksStore();
     const { filteredFrameworks } = useCRAFilteredFrameworks();
 
@@ -102,6 +121,15 @@ const GapAnalysisPage = () => {
     const [selectedFrameworkId, setSelectedFrameworkId] = useState<string | undefined>(undefined);
     const [exporting, setExporting] = useState(false);
     const contentRef = useRef<HTMLDivElement>(null);
+
+    // Certificate state
+    const [generatingCert, setGeneratingCert] = useState(false);
+    const [certificates, setCertificates] = useState<Certificate[]>([]);
+    const [showCertHistory, setShowCertHistory] = useState(false);
+    const [revokingId, setRevokingId] = useState<string | null>(null);
+
+    const userRole = getUserRole();
+    const isAdmin = userRole === 'org_admin' || userRole === 'super_admin';
 
     useEffect(() => {
         fetchFrameworks();
@@ -127,6 +155,24 @@ const GapAnalysisPage = () => {
         fetchData();
     }, [getAuthHeader, selectedFrameworkId]);
 
+    // Fetch certificates when framework changes
+    useEffect(() => {
+        const fetchCertificates = async () => {
+            const headers = getAuthHeader();
+            if (!headers) return;
+            try {
+                const params = selectedFrameworkId ? `?framework_id=${selectedFrameworkId}` : '';
+                const res = await fetch(`${cyberbridge_back_end_rest_api}/certificates${params}`, { headers });
+                if (res.ok) {
+                    setCertificates(await res.json());
+                }
+            } catch (err) {
+                console.error('Failed to fetch certificates:', err);
+            }
+        };
+        fetchCertificates();
+    }, [getAuthHeader, selectedFrameworkId]);
+
     const handleExportPdf = async () => {
         setExporting(true);
         try {
@@ -135,6 +181,176 @@ const GapAnalysisPage = () => {
             setExporting(false);
         }
     };
+
+    const handleGenerateCertificate = async () => {
+        if (!selectedFrameworkId) return;
+        setGeneratingCert(true);
+        try {
+            const headers = getAuthHeader();
+            if (!headers) return;
+            const res = await fetch(`${cyberbridge_back_end_rest_api}/certificates/generate`, {
+                method: 'POST',
+                headers: { ...headers, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ framework_id: selectedFrameworkId }),
+            });
+            if (res.ok) {
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                const disposition = res.headers.get('Content-Disposition');
+                const filename = disposition?.match(/filename="(.+)"/)?.[1] || 'certificate.pdf';
+                a.href = url;
+                a.download = filename;
+                a.click();
+                window.URL.revokeObjectURL(url);
+                message.success('Certificate generated successfully!');
+                // Refresh certificates list
+                const certsRes = await fetch(
+                    `${cyberbridge_back_end_rest_api}/certificates?framework_id=${selectedFrameworkId}`,
+                    { headers }
+                );
+                if (certsRes.ok) setCertificates(await certsRes.json());
+            } else {
+                const err = await res.json();
+                message.error(err.detail || 'Failed to generate certificate');
+            }
+        } catch (err) {
+            console.error('Certificate generation failed:', err);
+            message.error('Failed to generate certificate');
+        } finally {
+            setGeneratingCert(false);
+        }
+    };
+
+    const handleDownloadCertificate = async (certId: string) => {
+        const headers = getAuthHeader();
+        if (!headers) return;
+        try {
+            const res = await fetch(`${cyberbridge_back_end_rest_api}/certificates/${certId}/download`, { headers });
+            if (res.ok) {
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                const disposition = res.headers.get('Content-Disposition');
+                const filename = disposition?.match(/filename="(.+)"/)?.[1] || 'certificate.pdf';
+                a.href = url;
+                a.download = filename;
+                a.click();
+                window.URL.revokeObjectURL(url);
+            }
+        } catch (err) {
+            console.error('Download failed:', err);
+        }
+    };
+
+    const handleRevokeCertificate = async (certId: string) => {
+        const headers = getAuthHeader();
+        if (!headers) return;
+        const reason = window.prompt('Enter revocation reason:');
+        if (!reason) return;
+        setRevokingId(certId);
+        try {
+            const res = await fetch(`${cyberbridge_back_end_rest_api}/certificates/${certId}/revoke`, {
+                method: 'POST',
+                headers: { ...headers, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reason }),
+            });
+            if (res.ok) {
+                message.success('Certificate revoked');
+                // Refresh
+                const params = selectedFrameworkId ? `?framework_id=${selectedFrameworkId}` : '';
+                const certsRes = await fetch(`${cyberbridge_back_end_rest_api}/certificates${params}`, { headers });
+                if (certsRes.ok) setCertificates(await certsRes.json());
+            } else {
+                const err = await res.json();
+                message.error(err.detail || 'Failed to revoke certificate');
+            }
+        } catch (err) {
+            console.error('Revoke failed:', err);
+        } finally {
+            setRevokingId(null);
+        }
+    };
+
+    const canGenerateCertificate = selectedFrameworkId && data && data.summary.overall_compliance_score === 100 && isAdmin;
+
+    const certColumns = [
+        {
+            title: 'Certificate #',
+            dataIndex: 'certificate_number',
+            key: 'certificate_number',
+            width: 180,
+        },
+        {
+            title: 'Framework',
+            dataIndex: 'framework_name',
+            key: 'framework_name',
+        },
+        {
+            title: 'Score',
+            dataIndex: 'overall_score',
+            key: 'overall_score',
+            width: 80,
+            align: 'center' as const,
+            render: (val: number) => <span style={{ fontWeight: 600, color: '#52c41a' }}>{val}%</span>,
+        },
+        {
+            title: 'Issued',
+            dataIndex: 'issued_at',
+            key: 'issued_at',
+            width: 120,
+            render: (val: string) => new Date(val).toLocaleDateString(),
+        },
+        {
+            title: 'Expires',
+            dataIndex: 'expires_at',
+            key: 'expires_at',
+            width: 120,
+            render: (val: string) => new Date(val).toLocaleDateString(),
+        },
+        {
+            title: 'Status',
+            key: 'status',
+            width: 100,
+            render: (_: unknown, record: Certificate) => record.revoked
+                ? <Tag color="red">Revoked</Tag>
+                : new Date(record.expires_at) < new Date()
+                    ? <Tag color="orange">Expired</Tag>
+                    : <Tag color="green">Valid</Tag>,
+        },
+        {
+            title: 'Actions',
+            key: 'actions',
+            width: 140,
+            render: (_: unknown, record: Certificate) => (
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                        onClick={() => handleDownloadCertificate(record.id)}
+                        style={{
+                            padding: '2px 8px', fontSize: '12px', cursor: 'pointer',
+                            backgroundColor: '#1a365d', color: '#fff', border: 'none',
+                            borderRadius: '4px',
+                        }}
+                    >
+                        <DownloadOutlined /> PDF
+                    </button>
+                    {isAdmin && !record.revoked && (
+                        <button
+                            onClick={() => handleRevokeCertificate(record.id)}
+                            disabled={revokingId === record.id}
+                            style={{
+                                padding: '2px 8px', fontSize: '12px', cursor: 'pointer',
+                                backgroundColor: '#ff4d4f', color: '#fff', border: 'none',
+                                borderRadius: '4px', opacity: revokingId === record.id ? 0.6 : 1,
+                            }}
+                        >
+                            <DeleteOutlined /> Revoke
+                        </button>
+                    )}
+                </div>
+            ),
+        },
+    ];
 
     const chapterColumns = [
         {
@@ -213,6 +429,63 @@ const GapAnalysisPage = () => {
                                     value: f.id,
                                 }))}
                             />
+                            <Tooltip title={
+                                !isAdmin ? 'Only admins can generate certificates'
+                                : !selectedFrameworkId ? 'Select a framework first'
+                                : !data || data.summary.overall_compliance_score < 100 ? `Score must be 100% (currently ${data?.summary.overall_compliance_score ?? 0}%)`
+                                : ''
+                            }>
+                                <span>
+                                    <button
+                                        onClick={handleGenerateCertificate}
+                                        disabled={!canGenerateCertificate || generatingCert}
+                                        style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '6px',
+                                            padding: '6px 16px',
+                                            backgroundColor: canGenerateCertificate ? '#52c41a' : '#a0d911',
+                                            color: '#fff',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            fontSize: '13px',
+                                            fontWeight: 500,
+                                            cursor: !canGenerateCertificate || generatingCert ? 'not-allowed' : 'pointer',
+                                            opacity: !canGenerateCertificate || generatingCert ? 0.45 : 1,
+                                            transition: 'all 0.2s',
+                                        }}
+                                    >
+                                        <SafetyCertificateOutlined />
+                                        {generatingCert ? 'Generating...' : 'Generate Certificate'}
+                                    </button>
+                                </span>
+                            </Tooltip>
+                            <Tooltip title={certificates.length === 0 ? 'No certificates generated yet' : ''}>
+                                <span>
+                                    <button
+                                        onClick={() => setShowCertHistory(true)}
+                                        disabled={certificates.length === 0}
+                                        style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '6px',
+                                            padding: '6px 16px',
+                                            backgroundColor: '#0f386a',
+                                            color: '#fff',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            fontSize: '13px',
+                                            fontWeight: 500,
+                                            cursor: certificates.length === 0 ? 'not-allowed' : 'pointer',
+                                            opacity: certificates.length === 0 ? 0.45 : 1,
+                                            transition: 'all 0.2s',
+                                        }}
+                                    >
+                                        <HistoryOutlined />
+                                        Certificates ({certificates.length})
+                                    </button>
+                                </span>
+                            </Tooltip>
                             <button
                                 onClick={handleExportPdf}
                                 disabled={exporting || loading}
@@ -544,6 +817,29 @@ const GapAnalysisPage = () => {
                     ) : null}
                 </div>
             </div>
+
+            {/* Certificate History Modal */}
+            <Modal
+                title={
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <SafetyCertificateOutlined style={{ color: '#0f386a' }} />
+                        <span>Certificate History</span>
+                    </div>
+                }
+                open={showCertHistory}
+                onCancel={() => setShowCertHistory(false)}
+                footer={null}
+                width={900}
+            >
+                <Table
+                    dataSource={certificates}
+                    columns={certColumns}
+                    rowKey="id"
+                    pagination={false}
+                    size="small"
+                    style={{ marginTop: '16px' }}
+                />
+            </Modal>
         </div>
     );
 };

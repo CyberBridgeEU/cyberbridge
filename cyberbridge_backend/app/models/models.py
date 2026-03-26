@@ -2539,3 +2539,26 @@ class RegulatoryChange(Base):
     reviewed_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+
+class ComplianceCertificate(Base):
+    __tablename__ = "compliance_certificates"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    certificate_number = Column(String(50), unique=True, nullable=False)
+    framework_id = Column(UUID(as_uuid=True), ForeignKey("frameworks.id"), nullable=False)
+    organisation_id = Column(UUID(as_uuid=True), ForeignKey("organisations.id"), nullable=False)
+    issued_by_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    overall_score = Column(Float, nullable=False)
+    objectives_compliant_pct = Column(Float, nullable=False)
+    assessments_completed_pct = Column(Float, nullable=False)
+    policies_approved_pct = Column(Float, nullable=False)
+    issued_at = Column(DateTime, default=func.now())
+    expires_at = Column(DateTime, nullable=False)
+    revoked = Column(Boolean, default=False)
+    revoked_at = Column(DateTime, nullable=True)
+    revoked_reason = Column(Text, nullable=True)
+    verification_hash = Column(String(64), unique=True, nullable=False)
+    pdf_data = Column(LargeBinary, nullable=True)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
