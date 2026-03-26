@@ -2568,13 +2568,15 @@ class CertificateSubmission(Base):
     __tablename__ = "certificate_submissions"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    certificate_id = Column(UUID(as_uuid=True), ForeignKey("compliance_certificates.id"), nullable=False)
+    certificate_id = Column(UUID(as_uuid=True), ForeignKey("compliance_certificates.id"), nullable=True)
     organisation_id = Column(UUID(as_uuid=True), ForeignKey("organisations.id"), nullable=False)
     submitted_by_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     authority_name = Column(String(255), nullable=False)  # e.g. "ENISA", "National CSIRT", custom
     recipient_emails = Column(Text, nullable=False)  # JSON array of email addresses
     submission_method = Column(String(50), nullable=False, default="email")  # email, portal
     status = Column(String(50), nullable=False, default="draft")  # draft, sent, acknowledged, feedback_received
+    attachment_types = Column(Text, nullable=True)  # JSON array: ["certificate", "gap_analysis", "evidence_bundle", "policies"]
+    framework_id = Column(UUID(as_uuid=True), ForeignKey("frameworks.id"), nullable=True)
     subject = Column(Text, nullable=True)
     body = Column(Text, nullable=True)
     feedback = Column(Text, nullable=True)

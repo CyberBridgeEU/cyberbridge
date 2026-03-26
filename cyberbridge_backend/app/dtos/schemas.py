@@ -2826,9 +2826,11 @@ class CertificateVerifyResponse(BaseModel):
 # ===========================
 
 class SubmissionCreateRequest(BaseModel):
-    certificate_id: uuid.UUID
+    certificate_id: Optional[uuid.UUID] = None
+    framework_id: Optional[uuid.UUID] = None
     authority_name: str
     recipient_emails: List[str]
+    attachment_types: List[str] = []  # "certificate", "gap_analysis", "evidence_bundle", "policies"
     subject: Optional[str] = None
     body: Optional[str] = None
 
@@ -2837,11 +2839,12 @@ class SubmissionUpdateFeedbackRequest(BaseModel):
 
 class SubmissionResponse(BaseModel):
     id: uuid.UUID
-    certificate_id: uuid.UUID
-    certificate_number: str
-    framework_name: str
+    certificate_id: Optional[uuid.UUID] = None
+    certificate_number: Optional[str] = None
+    framework_name: Optional[str] = None
     authority_name: str
     recipient_emails: List[str]
+    attachment_types: List[str] = []
     submission_method: str
     status: str
     subject: Optional[str] = None

@@ -4,12 +4,14 @@ import {
     DeleteOutlined, CheckCircleOutlined, ClockCircleOutlined,
     ExclamationCircleOutlined, MessageOutlined, EditOutlined
 } from '@ant-design/icons';
-import { Table, Select, Tag, Modal, Input, Spin, message, Tooltip } from 'antd';
+import { Table, Select, Tag, Modal, Input, Spin, message, Tooltip, Checkbox } from 'antd';
 import Sidebar from "../components/Sidebar.tsx";
 import { useLocation } from 'wouter';
 import { useMenuHighlighting } from "../utils/menuUtils.ts";
 import { DashboardSection } from "../components/dashboard";
 import useAuthStore from "../store/useAuthStore.ts";
+import useFrameworksStore from "../store/useFrameworksStore.ts";
+import useCRAFilteredFrameworks from "../hooks/useCRAFilteredFrameworks.ts";
 import { cyberbridge_back_end_rest_api } from "../constants/urls.ts";
 
 const { TextArea } = Input;
@@ -28,11 +30,12 @@ interface Certificate {
 
 interface Submission {
     id: string;
-    certificate_id: string;
-    certificate_number: string;
-    framework_name: string;
+    certificate_id: string | null;
+    certificate_number: string | null;
+    framework_name: string | null;
     authority_name: string;
     recipient_emails: string[];
+    attachment_types: string[];
     submission_method: string;
     status: string;
     subject: string | null;
@@ -63,6 +66,8 @@ const RegulatorySubmissionPage = () => {
     const menuHighlighting = useMenuHighlighting(location);
     const getAuthHeader = useAuthStore((s) => s.getAuthHeader);
     const getUserRole = useAuthStore((s) => s.getUserRole);
+    const { fetchFrameworks } = useFrameworksStore();
+    const { filteredFrameworks } = useCRAFilteredFrameworks();
 
     const [loading, setLoading] = useState(true);
     const [certificates, setCertificates] = useState<Certificate[]>([]);
@@ -72,8 +77,10 @@ const RegulatorySubmissionPage = () => {
     // New submission modal
     const [showSubmitModal, setShowSubmitModal] = useState(false);
     const [selectedCertId, setSelectedCertId] = useState<string | undefined>(undefined);
+    const [selectedFrameworkId, setSelectedFrameworkId] = useState<string | undefined>(undefined);
     const [selectedAuthority, setSelectedAuthority] = useState<string | undefined>(undefined);
     const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
+    const [attachmentTypes, setAttachmentTypes] = useState<string[]>([]);
     const [customSubject, setCustomSubject] = useState('');
     const [customBody, setCustomBody] = useState('');
     const [submitting, setSubmitting] = useState(false);
@@ -111,6 +118,7 @@ const RegulatorySubmissionPage = () => {
         }
     };
 
+    useEffect(() => { fetchFrameworks(); }, [fetchFrameworks]);
     useEffect(() => { fetchAll(); }, [getAuthHeader]);
 
     // When authority is selected, auto-populate emails
@@ -122,8 +130,12 @@ const RegulatorySubmissionPage = () => {
     }, [selectedAuthority, emailConfigs]);
 
     const handleSubmit = async () => {
-        if (!selectedCertId || !selectedAuthority || selectedEmails.length === 0) {
-            message.warning('Please select a certificate, authority, and at least one email');
+        if (!selectedAuthority || selectedEmails.length === 0) {
+            message.warning('Please select an authority and at least one email');
+            return;
+        }
+        if (attachmentTypes.length === 0) {
+            message.warning('Please select at least one attachment type');
             return;
         }
         setSubmitting(true);
@@ -134,9 +146,11 @@ const RegulatorySubmissionPage = () => {
                 method: 'POST',
                 headers: { ...headers, 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    certificate_id: selectedCertId,
+                    certificate_id: selectedCertId || undefined,
+                    framework_id: selectedFrameworkId || undefined,
                     authority_name: selectedAuthority,
                     recipient_emails: selectedEmails,
+                    attachment_types: attachmentTypes,
                     subject: customSubject || undefined,
                     body: customBody || undefined,
                 }),
@@ -160,8 +174,10 @@ const RegulatorySubmissionPage = () => {
 
     const resetSubmitForm = () => {
         setSelectedCertId(undefined);
+        setSelectedFrameworkId(undefined);
         setSelectedAuthority(undefined);
         setSelectedEmails([]);
+        setAttachmentTypes([]);
         setCustomSubject('');
         setCustomBody('');
     };
@@ -245,24 +261,46 @@ const RegulatorySubmissionPage = () => {
     const uniqueAuthorities = [...new Set(emailConfigs.map(c => c.authority_name))];
     const validCertificates = certificates.filter(c => !c.revoked && new Date(c.expires_at) > new Date());
 
+    const attachmentOptions = [
+        { label: 'Gap Analysis Report (PDF)', value: 'gap_analysis' },
+        { label: 'Evidence Bundle (ZIP)', value: 'evidence_bundle' },
+        { label: 'Policies Report (PDF)', value: 'policies' },
+        ...(validCertificates.length > 0 ? [{ label: 'Compliance Certificate (PDF)', value: 'certificate' }] : []),
+    ];
+
+    const attachmentLabels: Record<string, string> = {
+        certificate: 'Certificate',
+        gap_analysis: 'Gap Analysis',
+        evidence_bundle: 'Evidence',
+        policies: 'Policies',
+    };
+
     const submissionColumns = [
-        {
-            title: 'Certificate',
-            dataIndex: 'certificate_number',
-            key: 'certificate_number',
-            width: 170,
-        },
         {
             title: 'Framework',
             dataIndex: 'framework_name',
             key: 'framework_name',
             width: 140,
+            render: (val: string | null) => val || <span style={{ color: '#999' }}>All</span>,
         },
         {
             title: 'Authority',
             dataIndex: 'authority_name',
             key: 'authority_name',
             width: 140,
+        },
+        {
+            title: 'Attachments',
+            dataIndex: 'attachment_types',
+            key: 'attachment_types',
+            width: 200,
+            render: (types: string[]) => (
+                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                    {(types || []).map(t => (
+                        <Tag key={t} style={{ fontSize: '11px', margin: 0 }}>{attachmentLabels[t] || t}</Tag>
+                    ))}
+                </div>
+            ),
         },
         {
             title: 'Recipients',
@@ -365,24 +403,17 @@ const RegulatorySubmissionPage = () => {
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             {isAdmin && (
-                                <Tooltip title={validCertificates.length === 0 ? 'No valid certificates available' : ''}>
-                                    <span>
-                                        <button
-                                            onClick={() => setShowSubmitModal(true)}
-                                            disabled={validCertificates.length === 0}
-                                            style={{
-                                                display: 'inline-flex', alignItems: 'center', gap: '6px',
-                                                padding: '6px 16px', backgroundColor: '#52c41a', color: '#fff',
-                                                border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: 500,
-                                                cursor: validCertificates.length === 0 ? 'not-allowed' : 'pointer',
-                                                opacity: validCertificates.length === 0 ? 0.45 : 1,
-                                                transition: 'all 0.2s',
-                                            }}
-                                        >
-                                            <SendOutlined /> New Submission
-                                        </button>
-                                    </span>
-                                </Tooltip>
+                                <button
+                                    onClick={() => setShowSubmitModal(true)}
+                                    style={{
+                                        display: 'inline-flex', alignItems: 'center', gap: '6px',
+                                        padding: '6px 16px', backgroundColor: '#52c41a', color: '#fff',
+                                        border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: 500,
+                                        cursor: 'pointer', transition: 'all 0.2s',
+                                    }}
+                                >
+                                    <SendOutlined /> New Submission
+                                </button>
                             )}
                         </div>
                     </div>
@@ -404,8 +435,8 @@ const RegulatorySubmissionPage = () => {
                                     />
                                 ) : (
                                     <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
-                                        <SafetyCertificateOutlined style={{ fontSize: 40, marginBottom: 12, opacity: 0.3 }} />
-                                        <p>No regulatory submissions yet. Generate a compliance certificate from Gap Analysis, then submit it here.</p>
+                                        <SendOutlined style={{ fontSize: 40, marginBottom: 12, opacity: 0.3 }} />
+                                        <p>No regulatory submissions yet. Click "New Submission" to send compliance documentation to a regulatory authority.</p>
                                     </div>
                                 )}
                             </DashboardSection>
@@ -448,28 +479,51 @@ const RegulatorySubmissionPage = () => {
 
             {/* New Submission Modal */}
             <Modal
-                title={<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><SendOutlined style={{ color: '#0f386a' }} /><span>Submit Certificate to Authority</span></div>}
+                title={<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><SendOutlined style={{ color: '#0f386a' }} /><span>Submit to Regulatory Authority</span></div>}
                 open={showSubmitModal}
                 onCancel={() => { setShowSubmitModal(false); resetSubmitForm(); }}
                 onOk={handleSubmit}
                 okText={submitting ? 'Submitting...' : 'Submit'}
-                okButtonProps={{ disabled: submitting || !selectedCertId || !selectedAuthority || selectedEmails.length === 0 }}
+                okButtonProps={{ disabled: submitting || !selectedAuthority || selectedEmails.length === 0 || attachmentTypes.length === 0 }}
                 width={700}
             >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
                     <div>
-                        <label style={labelStyle}>Certificate *</label>
+                        <label style={labelStyle}>Framework (optional — leave empty for all frameworks)</label>
                         <Select
-                            placeholder="Select a certificate"
+                            placeholder="All Frameworks"
+                            allowClear
                             style={{ width: '100%' }}
-                            value={selectedCertId}
-                            onChange={setSelectedCertId}
-                            options={validCertificates.map(c => ({
-                                label: `${c.certificate_number} — ${c.framework_name} (${c.overall_score}%)`,
-                                value: c.id,
-                            }))}
+                            value={selectedFrameworkId}
+                            onChange={setSelectedFrameworkId}
+                            options={filteredFrameworks.map(f => ({ label: f.name, value: f.id }))}
                         />
                     </div>
+                    <div>
+                        <label style={labelStyle}>Attachments *</label>
+                        <Checkbox.Group
+                            value={attachmentTypes}
+                            onChange={(vals) => setAttachmentTypes(vals as string[])}
+                            style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
+                            options={attachmentOptions}
+                        />
+                    </div>
+                    {attachmentTypes.includes('certificate') && (
+                        <div>
+                            <label style={labelStyle}>Certificate</label>
+                            <Select
+                                placeholder="Select a certificate"
+                                allowClear
+                                style={{ width: '100%' }}
+                                value={selectedCertId}
+                                onChange={setSelectedCertId}
+                                options={validCertificates.map(c => ({
+                                    label: `${c.certificate_number} — ${c.framework_name} (${c.overall_score}%)`,
+                                    value: c.id,
+                                }))}
+                            />
+                        </div>
+                    )}
                     <div>
                         <label style={labelStyle}>Authority *</label>
                         <Select
@@ -514,7 +568,7 @@ const RegulatorySubmissionPage = () => {
                     </div>
                     <div style={{ backgroundColor: '#fffbe6', border: '1px solid #ffe58f', borderRadius: '6px', padding: '10px 14px', fontSize: '12px', color: '#ad8b00' }}>
                         <ExclamationCircleOutlined style={{ marginRight: 6 }} />
-                        If SMTP is configured, the certificate PDF will be sent via email automatically. Otherwise, the submission will be saved as a draft for manual sending.
+                        If SMTP is configured, attachments will be sent via email automatically. Otherwise, the submission will be saved as a draft for manual sending via portal.
                     </div>
                 </div>
             </Modal>

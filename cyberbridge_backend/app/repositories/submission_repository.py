@@ -18,12 +18,14 @@ def create_submission(db: Session, data: dict) -> models.CertificateSubmission:
 
 
 def get_submissions_by_org(db: Session, org_id: uuid.UUID):
-    """List all submissions for an org, joined with certificate + framework info."""
+    """List all submissions for an org, with optional certificate + framework info."""
     return db.query(
         models.CertificateSubmission.id,
         models.CertificateSubmission.certificate_id,
+        models.CertificateSubmission.framework_id,
         models.CertificateSubmission.authority_name,
         models.CertificateSubmission.recipient_emails,
+        models.CertificateSubmission.attachment_types,
         models.CertificateSubmission.submission_method,
         models.CertificateSubmission.status,
         models.CertificateSubmission.subject,
@@ -35,12 +37,15 @@ def get_submissions_by_org(db: Session, org_id: uuid.UUID):
         models.ComplianceCertificate.certificate_number,
         models.Framework.name.label("framework_name"),
         models.User.name.label("submitted_by_name"),
-    ).join(
+    ).outerjoin(
         models.ComplianceCertificate,
         models.CertificateSubmission.certificate_id == models.ComplianceCertificate.id
-    ).join(
+    ).outerjoin(
         models.Framework,
-        models.ComplianceCertificate.framework_id == models.Framework.id
+        func.coalesce(
+            models.CertificateSubmission.framework_id,
+            models.ComplianceCertificate.framework_id
+        ) == models.Framework.id
     ).join(
         models.User,
         models.CertificateSubmission.submitted_by_user_id == models.User.id

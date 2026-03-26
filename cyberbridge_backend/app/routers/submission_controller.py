@@ -31,9 +31,11 @@ async def create_submission(
         sub = submission_service.create_and_send_submission(
             db=db,
             current_user=current_user,
-            certificate_id=request.certificate_id,
             authority_name=request.authority_name,
             recipient_emails=request.recipient_emails,
+            attachment_types=request.attachment_types,
+            certificate_id=request.certificate_id,
+            framework_id=request.framework_id,
             subject=request.subject,
             body=request.body,
         )
@@ -64,6 +66,7 @@ async def list_submissions(
                 framework_name=r.framework_name,
                 authority_name=r.authority_name,
                 recipient_emails=json.loads(r.recipient_emails) if isinstance(r.recipient_emails, str) else r.recipient_emails,
+                attachment_types=json.loads(r.attachment_types) if r.attachment_types and isinstance(r.attachment_types, str) else (r.attachment_types or []),
                 submission_method=r.submission_method,
                 status=r.status,
                 subject=r.subject,
