@@ -24,8 +24,8 @@ build/
 
 # Generated install/update script output
 docker-compose.generated.yml
-.cyberfort.env
-.cyberfort.last_update_head
+.cyberbridge.env
+.cyberbridge.last_update_head
 
 # Logs
 *.log
