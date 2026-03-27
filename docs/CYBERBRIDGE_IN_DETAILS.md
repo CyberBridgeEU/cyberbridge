@@ -1,7 +1,7 @@
 # CyberBridge in Details
 
-**Version:** 10.0
-**Document Date:** February 2025
+**Version:** 11.0
+**Document Date:** March 2026
 **Classification:** Technical Documentation
 **Author:** CyberBridge Development Team
 
@@ -75,6 +75,9 @@ CyberBridge is a comprehensive cybersecurity compliance assessment platform desi
   - Compliance Advisor for framework guidance
   - AI-powered policy alignment suggestions
   - Vulnerability remediation suggestions
+  - AI Compliance Roadmap generation for objectives
+  - RAG-enhanced chatbot with semantic search over framework objectives
+  - Regulatory change analysis for framework updates
 
 #### Cyber Threat Intelligence (CTI) Layer
 - **CTI Service:** Lightweight FastAPI microservice (port 8020)
@@ -98,6 +101,27 @@ CyberBridge is a comprehensive cybersecurity compliance assessment platform desi
   - PDF/JSON reporting
   - Configurable workers (1-10)
 
+#### Embeddings / RAG Layer
+- **Embeddings Service:** FastAPI microservice (port 8016)
+- **Model:** SentenceTransformer all-MiniLM-L6-v2 (384 dimensions)
+- **Storage:** PostgreSQL with pgvector extension
+- **Memory Limit:** 1GB
+- **Features:**
+  - Semantic embedding of framework objectives (chapters, titles, requirements, guidance)
+  - Cosine similarity search for top-k relevant objectives
+  - RAG context injection for AI Assistant chatbot
+  - Batch processing (64 objectives per batch)
+
+#### Regulatory Monitoring Layer
+- **SearXNG:** Self-hosted meta-search engine (port 8040)
+- **Search Sources:** Google, Bing, DuckDuckGo, Google Scholar
+- **API Sources:** EUR-Lex, NIST
+- **Features:**
+  - Automated regulatory change detection
+  - LLM-powered impact analysis against current frameworks
+  - Framework snapshot and revert system
+  - Change approval workflow (pending/approved/rejected/applied)
+
 ### 1.3 Architecture Patterns
 
 #### Microservices Architecture
@@ -120,6 +144,8 @@ The system follows a tiered microservices architecture:
 - Semgrep scanner
 - Syft SBOM generator
 - All start after ZAP is healthy
+- Embeddings service (semantic search)
+- SearXNG (regulatory monitoring)
 
 **Tier 3.5: CTI & Dark Web Services**
 - CTI Service (port 8020) — stores scanner results, serves threat intelligence

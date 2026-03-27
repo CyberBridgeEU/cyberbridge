@@ -134,6 +134,24 @@ As a super admin, you have full access to all framework configuration:
 - **Framework Questions**: Navigate to Frameworks > Configuration > Framework Questions
 - **Framework Updates**: Navigate to Frameworks > Configuration > Framework Updates
 
+### Regulatory Change Monitor
+
+Monitor and apply regulatory changes to compliance frameworks system-wide.
+
+1. Navigate to **Frameworks > Configuration > Framework Updates**
+2. **Scan for Changes**: Trigger web searches via SearXNG (Google, Bing, DuckDuckGo, Google Scholar) plus EUR-Lex and NIST APIs
+3. **AI Analysis**: Analyze scan results against current framework content using LLM
+4. **Review Changes**: Approve or reject detected changes with impact assessment
+5. **Apply Changes**: Apply approved changes to organization frameworks
+6. **Generate Seed Updates**: As super admin, generate seed update files for system-wide framework distribution
+7. **Snapshot Management**: View framework snapshot timeline and revert to previous versions if needed
+
+**SearXNG Administration:**
+- SearXNG runs on port 8040 (internal 8080) as a Docker container
+- Configuration: `searxng/settings.yml`
+- Backend connects via `SEARXNG_URL` environment variable (default: `http://searxng:8080`)
+- No external API keys required — fully self-hosted
+
 ### Compliance Advisor (AI)
 
 1. Navigate to **Frameworks > Compliance Advisor**
@@ -175,6 +193,16 @@ Configure the AI backbone for the platform with support for multiple providers:
 6. Save configuration
 
 This powers all AI features: Compliance Advisor, question correlations, scan analysis, objective recommendations, and policy alignment suggestions.
+
+### AI Compliance Roadmap
+
+AI-powered step-by-step action plans for achieving compliance.
+
+1. Generated from Gap Analysis (bulk) or Objectives Checklist (individual)
+2. Analyzes current status, assessments, policies, evidence, and CTI indicators
+3. Produces: gap summary, prioritized action steps, effort estimates, quick wins, dependencies, and risk analysis
+4. Supports cancellation for long-running generation
+5. Uses RAG context from the Embeddings service for enhanced accuracy
 
 ### SSO Configuration
 
@@ -389,6 +417,26 @@ System-wide control management:
 6. Identify specific gaps: objectives without evidence, non-compliant objectives, and objectives without policies
 7. Export gap analysis reports to PDF for cross-organization reporting
 
+### Compliance Certificate
+
+System-wide compliance certificate management.
+
+1. Certificates are generated from the Gap Analysis page when 100% compliance is achieved
+2. View and manage certificates across organizations
+3. Each certificate includes: auto-generated number, compliance metrics, 1-year validity, SHA256 verification hash
+4. Download certificates as PDF, revoke with documented reason
+5. Public verification endpoint allows external parties to verify certificate authenticity
+
+### Regulatory Submissions
+
+System-wide regulatory submission tracking.
+
+1. Navigate to **Regulatory Submissions** to view all submissions
+2. Create submissions with certificates, gap analysis reports, evidence bundles, and policy exports
+3. Pre-configured authority email directory (NIST, CISA, EU-NTA, ENISA, etc.) with custom entries
+4. Track submission lifecycle: Draft > Sent > Acknowledged > Feedback Received
+5. Record authority feedback with timestamps
+
 ## CE Marking Checklists
 
 System-wide oversight of CE marking checklists across organizations.
@@ -536,6 +584,23 @@ The dark web scanner runs independently on port 8030 (internal 8001) with:
 Environment variables:
 - `DATABASE_URL`: PostgreSQL connection string
 - `MAX_SCAN_WORKERS`: Initial worker count (default 3)
+
+### Embeddings Service Administration
+
+The Embeddings microservice provides semantic search capabilities for RAG.
+
+| Component | Details |
+|-----------|---------|
+| Port | 8016 (internal 8000) |
+| Model | SentenceTransformer all-MiniLM-L6-v2 (384 dimensions) |
+| Memory Limit | 1GB |
+| Database | pgvector extension in shared PostgreSQL |
+| Health Check | `GET /health` |
+
+The service embeds framework objectives into vector space for semantic similarity search. The AI Assistant chatbot uses these embeddings to retrieve relevant compliance context before generating responses.
+
+Environment variables:
+- `EMBEDDINGS_SERVICE_URL`: Connection URL for the backend (default: `http://embeddings:8000`)
 
 ## Security Tools
 
@@ -759,6 +824,12 @@ For issues requiring additional support:
 | CTI Dashboard | Yes | Yes | Yes |
 | Dark Web Scans | Yes | Yes | Yes |
 | Dark Web Settings | No | Admin | Admin |
+| Regulatory Submissions | Yes | Yes | Yes |
+| Compliance Certificates | Yes | Yes | Yes |
+| AI Compliance Roadmap | Yes | Yes | Yes |
+| AI Assistant (RAG) | Yes | Yes | Yes |
+| Regulatory Monitor | No | Yes | Yes |
+| Regulatory Seed Updates | No | No | Yes |
 
 ### System Architecture
 
@@ -766,10 +837,12 @@ The CyberBridge platform consists of:
 
 - **Frontend**: React application (Port 5173)
 - **Backend API**: FastAPI (Port 8000)
-- **Database**: PostgreSQL (Port 5433)
+- **Database**: PostgreSQL with pgvector (Port 5433)
 - **Security Services**: ZAP (8010), Nmap (8011), OSV (8012), Semgrep (8013), Syft (8014)
+- **Embeddings Service**: Semantic search for RAG (Port 8016)
 - **CTI Service**: Threat Intelligence aggregation (Port 8020)
 - **Dark Web Scanner**: Tor-based dark web search (Port 8030)
+- **SearXNG**: Self-hosted meta-search for regulatory monitoring (Port 8040)
 - **LLM Service**: Configurable (llama.cpp, OpenAI, Anthropic, Google, X AI, QLON)
 
 ---

@@ -19,7 +19,7 @@ The script will:
 3. Check disk space, RAM, and port availability
 4. Ask you to choose a deployment scenario (HTTPS domain, IP address, or localhost)
 5. Ask you to choose a deployment method (Docker Compose or direct docker run)
-6. Build all 10 Docker images with the correct architecture-specific Dockerfiles
+6. Build all 12 Docker images with the correct architecture-specific Dockerfiles
 7. Start containers in the correct dependency order
 8. Verify all services are healthy and print access URLs
 
@@ -143,6 +143,10 @@ cd syft
 docker build -t syft .
 
 cd..
+cd embeddings
+docker build -t embeddings .
+
+cd..
 cd llm
 docker build -t llm .
 
@@ -186,17 +190,19 @@ docker run -d --name llm --network cyberbridge-network -p 8015:8015 \
   --restart unless-stopped \
   llm
 docker run -d --name cyberbridge_db --network cyberbridge-network -p 5433:5432 --restart unless-stopped cyberbridge_postgres
+docker run -d --name embeddings --network cyberbridge-network -p 8016:8000 --memory="1g" --restart unless-stopped embeddings
+docker run -d --name searxng --network cyberbridge-network -p 8040:8080 -v $(pwd)/searxng/settings.yml:/etc/searxng/settings.yml:ro --restart unless-stopped searxng/searxng:latest
 docker run -d --name cyberbridge_backend --network cyberbridge-network -p 5174:8000 --restart unless-stopped cyberbridge_backend
 docker run -d --name cyberbridge_frontend -p 5173:5173 --restart unless-stopped cyberbridge_frontend
 
 UPDATE OPTION(in case you want to add a flag to container for example...):
 Option 1: Update existing containers (quick)
-  docker update --restart unless-stopped zap nmap osv semgrep syft llm cyberbridge_db cyberbridge_backend cyberbridge_frontend
-  docker start zap nmap osv semgrep syft llm cyberbridge_db cyberbridge_backend cyberbridge_frontend
+  docker update --restart unless-stopped zap nmap osv semgrep syft llm embeddings searxng cyberbridge_db cyberbridge_backend cyberbridge_frontend
+  docker start zap nmap osv semgrep syft llm embeddings searxng cyberbridge_db cyberbridge_backend cyberbridge_frontend
 
   Option 2: Recreate containers (recommended - uses updated commands from installation_guide.md)
   # Stop and remove all
-  docker rm -f cyberbridge_frontend cyberbridge_backend cyberbridge_db llm zap nmap osv semgrep syft
+  docker rm -f cyberbridge_frontend cyberbridge_backend cyberbridge_db llm embeddings searxng zap nmap osv semgrep syft
 
 ### Access the Application via the linux environment(not inside the docker container):
 - **Frontend**: http://localhost:5173
@@ -209,6 +215,8 @@ Option 1: Update existing containers (quick)
   - Semgrep: http://localhost:8013
   - Syft SBOM: http://localhost:8014
 - **LLM Service**: http://localhost:8015
+- **Embeddings Service**: http://localhost:8016
+- **SearXNG (Regulatory Monitor)**: http://localhost:8040
 
 ---
 
@@ -289,6 +297,8 @@ docker restart cyberbridge_backend
 | CTI Service | 8020 | Cyber Threat Intelligence aggregation service |
 | Redis Dark Web | 6382 | Dark web scan queue |
 | Dark Web Scanner | 8030 | Dark web scanning service |
+| Embeddings | 8016 | Semantic search embeddings service |
+| SearXNG | 8040 | Meta-search engine for regulatory monitoring |
 
 ---
 
@@ -324,6 +334,41 @@ The dark web scanner can be configured through the frontend settings page (`/dar
 - **Tor Proxy:** The scanner uses a built-in SOCKS5 proxy for Tor network access. No additional Tor configuration is required.
 
 > **Note:** The dark web scanner settings page is restricted to admin users only.
+
+---
+
+## Embeddings Service (RAG)
+
+The Embeddings service provides semantic search capabilities using vector embeddings for Retrieval-Augmented Generation (RAG). It embeds framework objectives into a pgvector database and enables the AI chatbot to retrieve relevant compliance context.
+
+**Key features:**
+- Uses SentenceTransformer model (all-MiniLM-L6-v2) for 384-dimensional embeddings
+- Stores embeddings in PostgreSQL using the pgvector extension
+- Provides semantic search for the AI Assistant chatbot
+- Memory limit: 1GB
+
+**Environment variables** (set in `docker-compose.yml`):
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| (none required) | The service is self-contained | - |
+
+> **Note:** The pgvector extension is automatically installed by the PostgreSQL Dockerfile (`postgres/init-pgvector.sql`).
+
+---
+
+## SearXNG (Regulatory Change Monitor)
+
+SearXNG is a self-hosted meta-search engine used by the Regulatory Change Monitor feature to scan the web for regulatory updates affecting compliance frameworks.
+
+**Key features:**
+- Aggregates results from Google, Bing, DuckDuckGo, and Google Scholar
+- Provides web search capabilities for regulatory change detection
+- Self-hosted for privacy — no external API keys required
+
+**Configuration:**
+- Settings file: `searxng/settings.yml`
+- The backend connects via `SEARXNG_URL` environment variable (default: `http://searxng:8080`)
 
 ---
 

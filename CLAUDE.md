@@ -15,6 +15,8 @@ CyberBridge is a cybersecurity compliance assessment platform with a microservic
 - **CTI Service**: Cyber Threat Intelligence aggregation microservice with MITRE ATT&CK and CISA KEV feeds
 - **Dark Web Scanner**: Tor-based dark web intelligence gathering service with PDF report generation
 - **LLM Integration**: llama.cpp with phi-4 model for AI-powered analysis
+- **Embeddings Service**: SentenceTransformer-based semantic search for RAG (Retrieval-Augmented Generation)
+- **SearXNG**: Self-hosted meta-search engine for regulatory change monitoring
 
 ### Directory Structure
 - `cyberbridge_frontend/` - React frontend application
@@ -24,7 +26,9 @@ CyberBridge is a cybersecurity compliance assessment platform with a microservic
 - `cti/service/` - CTI microservice (stores scanner results in PostgreSQL, serves aggregated threat intelligence)
 - `darkweb/` - Dark web scanner microservice (Tor-based search, PDF reports, PostgreSQL queue)
 - `llamacpp/` - LLM service container (llama.cpp)
-- `postgres/` - Database initialization scripts
+- `embeddings/` - Embeddings microservice (SentenceTransformer, pgvector RAG)
+- `searxng/` - SearXNG meta-search engine configuration for regulatory monitoring
+- `postgres/` - Database initialization scripts (includes pgvector extension)
 - `docs/` - Project documentation
 
 ### Backend Architecture
@@ -80,8 +84,10 @@ docker-compose logs [service]      # View service logs
 - Semgrep: 8013
 - Syft (SBOM): 8014
 - LLM (llama.cpp): 8015
+- Embeddings (RAG): 8016
 - CTI Service: 8020
 - Dark Web Scanner: 8030 (internal 8001)
+- SearXNG (Regulatory Monitor): 8040 (internal 8080)
 
 ## Key Features
 - User authentication and role-based access control (JWT, SSO, magic links for auditors)
@@ -96,6 +102,12 @@ docker-compose logs [service]      # View service logs
 - External audit engagements with magic link authentication
 - PDF export functionality
 - AI-powered analysis (llama.cpp, OpenAI, Anthropic, Google, X AI, QLON)
+- RAG-enhanced AI Assistant with semantic search over framework objectives (pgvector embeddings)
+- AI Compliance Roadmap generation for non-compliant objectives
+- Regulatory Change Monitor with SearXNG web scanning and LLM analysis
+- Compliance Certificate generation with SHA256 verification and 1-year validity
+- Regulatory Submissions to authorities with pre-configured email directory
+- Framework snapshot and revert system for regulatory updates
 - EU Vulnerability Database (EUVD) and NVD synchronization
 - Automated backup and restore system
 

@@ -53,9 +53,19 @@ Before diving into the flows, here is a complete reference of what each role can
 | Dependency Check (OSV) | Domain | Domain | Domain |
 | SBOM Generator (Syft) | Domain | Domain | Domain |
 | Scan Findings | Domain | Domain | Domain |
+| **Regulatory & Certificates** | | | |
+| Gap Analysis | Yes | Yes | Yes |
+| Compliance Certificates | Yes | Yes | Yes |
+| AI Compliance Roadmap | Yes | Yes | Yes |
+| Regulatory Submissions | Yes | Yes | Yes |
+| Regulatory Change Monitor | No | Yes | Yes |
+| Regulatory Seed Updates | No | No | Yes |
+| **AI Features** | | | |
+| AI Assistant (RAG Chatbot) | Yes | Yes | Yes |
+| AI Suggest Answers | Yes | Yes | Yes |
+| AI Compliance Roadmap | Yes | Yes | Yes |
 | **Assessments** | | | |
 | Conduct Assessments | Yes | Yes | Yes |
-| AI Suggest Answers | Yes | Yes | Yes |
 | View Reports | Yes | Yes | Yes |
 | **Audit** | | | |
 | Audit Engagements | No | Yes | Yes |
@@ -400,6 +410,73 @@ Walk through each settings section:
 - Gap analysis shows exactly where your compliance program has holes
 - Use this to prioritize remediation efforts
 - The PDF report is useful for management reviews and audit preparation
+
+> **Cut point**
+
+---
+
+### Scene 2.6b: Compliance Certificate & AI Roadmap
+
+**Navigate to**: Compliance Chain > Gap Analysis (continued)
+
+1. If the compliance score is 100%, show the **Generate Certificate** button
+2. Click to generate a digital compliance certificate with:
+   - Auto-generated certificate number
+   - Compliance metrics and 1-year validity
+   - SHA256 verification hash
+3. Download the certificate as PDF
+4. Show certificate history and revocation workflow
+5. Click **Generate Roadmap** to create AI-powered action plans for non-compliant objectives
+6. Show a roadmap with step-by-step actions, priorities, effort estimates, and quick wins
+7. Demonstrate cancellation of long-running generation
+
+**What to highlight**:
+- Certificates provide formal proof of compliance achievement
+- AI Roadmaps give actionable, prioritized steps to close compliance gaps
+- Roadmaps can also be generated per objective from the Objectives Checklist
+
+> **Cut point**
+
+---
+
+### Scene 2.6c: Regulatory Submissions
+
+**Navigate to**: Regulatory Submissions
+
+1. Show the submission creation workflow:
+   - Select a compliance certificate
+   - Choose a regulatory authority from the pre-configured directory
+   - Select attachment types (certificate, gap analysis, evidence bundle, policies)
+2. Show the authority email directory with pre-configured entries (NIST, CISA, EU-NTA, ENISA)
+3. Add a custom authority email configuration
+4. Show submission history with status tracking (Draft → Sent → Acknowledged → Feedback Received)
+5. Demonstrate recording feedback from authorities
+
+**What to highlight**:
+- Submissions bundle all compliance evidence into a single package
+- Pre-configured directory saves time finding authority contact details
+- Full status tracking provides audit trail for submissions
+
+> **Cut point**
+
+---
+
+### Scene 2.6d: Regulatory Change Monitor
+
+**Navigate to**: Frameworks > Configuration > Framework Updates
+
+1. Select a framework (e.g., CRA) from the dropdown
+2. Click **Scan for Changes** to trigger a regulatory web search
+3. Show how SearXNG searches multiple sources (Google, Bing, DuckDuckGo, EUR-Lex, NIST)
+4. After scan completes, click **Analyze** to trigger LLM analysis
+5. Show detected regulatory changes with impact assessment
+6. Demonstrate the approve/reject workflow for changes
+7. Show the framework snapshot timeline with revert capability
+
+**What to highlight**:
+- Automated monitoring keeps frameworks current with regulatory changes
+- LLM analysis identifies which framework elements are affected
+- Snapshots allow safe rollback if changes need to be reverted
 
 > **Cut point**
 
@@ -803,13 +880,14 @@ Walk through each documentation page:
 
 ---
 
-### Scene 3.10: AI Assistant & Profile
+### Scene 3.10: AI Assistant (RAG-Enhanced) & Profile
 
-**Click**: AI Assistant icon (bottom of sidebar)
+**Click**: AI Assistant in the sidebar
 
 1. Open the chatbot drawer
-2. Ask a compliance question (e.g., "What controls address data encryption?")
-3. Show the AI response
+2. Ask a compliance question (e.g., "What are the CRA requirements for vulnerability disclosure?")
+3. Show the AI response — explain that it uses RAG (Retrieval-Augmented Generation) to retrieve relevant framework objectives via semantic search before generating the answer
+4. Show how the response is grounded in actual framework content from your organization
 
 **Click**: Profile icon (bottom of sidebar)
 

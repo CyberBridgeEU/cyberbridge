@@ -609,6 +609,85 @@ The Settings screen (admin only) provides configuration controls for the dark we
 
 ---
 
+## 30. Regulatory Change Monitor (/framework_updates)
+
+*[Scene: Framework Updates page with scan controls and snapshot timeline]*
+
+The Regulatory Change Monitor is an intelligent automation layer that keeps compliance frameworks current with evolving regulations. Rather than manually tracking regulatory changes across dozens of sources, CyberBridge proactively scans the web and official regulatory APIs to detect updates.
+
+**Feature Highlights:**
+- **Automated Web Scanning:** Uses SearXNG (self-hosted meta-search engine) to search Google, Bing, DuckDuckGo, and Google Scholar for regulatory changes — plus EUR-Lex and NIST APIs for official sources
+- **LLM-Powered Analysis:** After scanning, the AI analyzes findings against your current framework content and identifies specific chapters, objectives, and questions that may need updating
+- **Change Review Workflow:** Detected changes are presented with impact assessments — admins approve or reject each change before it's applied
+- **Framework Snapshots:** Before any changes are applied, the system creates a versioned snapshot, enabling rollback to any previous framework state
+- **Snapshot Timeline:** Visual timeline showing the evolution of framework versions with one-click revert capability
+
+---
+
+## 31. Compliance Certificate (/gap_analysis)
+
+*[Scene: Gap Analysis page showing 100% compliance with certificate generation]*
+
+When an organization achieves full compliance on a framework, CyberBridge can generate a formal digital Compliance Certificate — a tangible, verifiable proof of compliance achievement.
+
+**Feature Highlights:**
+- **Certificate Generation:** Available when the overall compliance score reaches 100% — click "Generate Certificate" to create a digitally signed document
+- **Auto-Generated Certificate Number:** Each certificate receives a unique identifier (e.g., `CRA-2024-00001`) for tracking and reference
+- **Compliance Metrics:** The certificate captures objectives compliance %, assessment completion %, and policy coverage % at the time of generation
+- **1-Year Validity:** Certificates are valid for 365 days from the date of issue, encouraging regular compliance reviews
+- **SHA256 Verification:** Each certificate includes a cryptographic hash that external parties can use to verify authenticity
+- **PDF Download:** Generate professional PDF certificates for stakeholders, auditors, and regulatory authorities
+- **Revocation Workflow:** If compliance status changes, certificates can be revoked with a documented reason, maintaining audit integrity
+
+---
+
+## 32. Regulatory Submissions (/regulatory_submissions)
+
+*[Scene: Regulatory Submissions page with authority directory and submission workflow]*
+
+CyberBridge streamlines the process of submitting compliance documentation to regulatory authorities. Instead of manually preparing and emailing packages, users can assemble, send, and track submissions directly from the platform.
+
+**Feature Highlights:**
+- **Authority Email Directory:** Pre-configured email addresses for common regulatory bodies (NIST, CISA, EU-NTA, ENISA, and more) with the ability to add custom entries
+- **Attachment Bundling:** Select what to include — compliance certificates, gap analysis reports, evidence bundles (ZIP), and policy exports (PDF)
+- **Multi-Recipient Support:** Send to multiple authority email addresses in a single submission
+- **Status Tracking:** Track the lifecycle of each submission: Draft, Sent, Acknowledged, Feedback Received
+- **Feedback Recording:** When authorities respond, record their feedback directly on the submission with timestamps
+- **Manual Status Updates:** For portal-based submissions, manually mark submissions as sent or acknowledged
+
+---
+
+## 33. AI Compliance Roadmap (/gap_analysis, /objectives_checklist)
+
+*[Scene: Compliance Roadmap drawer showing step-by-step action plan]*
+
+The AI Compliance Roadmap transforms compliance gaps into actionable, prioritized plans. Rather than leaving teams to figure out how to close gaps on their own, CyberBridge's AI analyzes the full compliance context and generates step-by-step remediation roadmaps.
+
+**Feature Highlights:**
+- **Bulk Generation:** From the Gap Analysis page, generate roadmaps for all non-compliant objectives at once
+- **Individual Generation:** From the Objectives Checklist, generate a roadmap for any specific objective
+- **Context-Aware Analysis:** The AI considers current compliance status, assessment answers, linked policies, uploaded evidence, and CTI indicators
+- **Structured Action Plans:** Each roadmap includes a gap summary, risk analysis, and numbered action steps with priority (critical/high/medium/low), estimated effort, and category (technical/policy/evidence/process/training)
+- **Quick Wins:** Identifies low-effort, high-impact actions that can be completed immediately
+- **Dependencies:** Maps out action step dependencies to guide optimal sequencing
+- **Cancellation Support:** Long-running roadmap generation can be cancelled at any time
+
+---
+
+## 34. AI Assistant — RAG-Enhanced Chatbot
+
+*[Scene: AI Assistant chatbot drawer with contextual compliance response]*
+
+The AI Assistant is CyberBridge's intelligent compliance advisor, powered by Retrieval-Augmented Generation (RAG). Unlike generic AI chatbots, the CyberBridge assistant retrieves relevant information from your organization's actual framework content before generating responses — ensuring answers are grounded in your specific compliance requirements.
+
+**Feature Highlights:**
+- **Semantic Search:** Framework objectives are embedded as vectors using the Embeddings microservice (SentenceTransformer all-MiniLM-L6-v2)
+- **Contextual Retrieval:** When you ask a question, the system finds the 5 most relevant framework objectives using cosine similarity and injects them as context
+- **Grounded Responses:** Answers reference actual framework chapters, objectives, and requirements — not generic compliance advice
+- **Session History:** Conversation context is maintained within the session for follow-up questions
+
+---
+
 ## Closing
 
 *[Scene: CyberBridge Dashboard with activity, fading to logo]*
@@ -626,8 +705,8 @@ Welcome to CyberBridge. Welcome to compliance, simplified.
 ## Document Information
 
 **Document Type:** Video Narration Script (Voiceover)
-**Version:** 2.0
-**Target Duration:** Approximately 35-40 minutes (full product tour)
+**Version:** 3.0
+**Target Duration:** Approximately 45-50 minutes (full product tour)
 **Tone:** Professional, informative, marketing-oriented
 **Audience:** Prospective customers, new users, stakeholders
 **Application:** CyberBridge Cybersecurity Compliance Assessment Platform
@@ -672,4 +751,9 @@ Welcome to CyberBridge. Welcome to compliance, simplified.
 | Dark Web Intelligence - Scan Details | Categorized findings and breach status | 1.5-2 min |
 | Dark Web Intelligence - Reports | Report download and summaries | 1 min |
 | Dark Web Intelligence - Settings | Admin configuration demo | 1 min |
+| Regulatory Change Monitor | Web scan, analysis, snapshot timeline | 2-2.5 min |
+| Compliance Certificate | Certificate generation and verification | 1.5-2 min |
+| Regulatory Submissions | Submission workflow and status tracking | 1.5-2 min |
+| AI Compliance Roadmap | Roadmap generation and action plans | 1.5-2 min |
+| AI Assistant (RAG) | Chatbot with contextual compliance Q&A | 1-1.5 min |
 | Closing | Dashboard activity, logo fade | 30-45 sec |

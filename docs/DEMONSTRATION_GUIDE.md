@@ -371,6 +371,60 @@
 
 ---
 
+### **Phase 13: Regulatory Compliance Automation** (8-10 minutes)
+
+#### 13.1 Regulatory Change Monitor
+- Navigate to **Frameworks > Configuration > Framework Updates**
+- **Show the Regulatory Change Monitor:**
+  - Select a framework (e.g., CRA) from the dropdown
+  - Click "Scan for Changes" to trigger a regulatory web search
+  - Explain how SearXNG searches Google, Bing, DuckDuckGo, and Google Scholar
+  - Show scan results from EUR-Lex and NIST APIs
+  - Click "Analyze" to trigger LLM analysis of findings
+  - Show detected changes with impact assessment
+  - Demonstrate approve/reject workflow for changes
+  - Show the framework snapshot timeline with revert capability
+
+#### 13.2 Compliance Certificate Generation
+- Navigate to **Compliance Chain > Gap Analysis**
+- **Show the certificate generation flow:**
+  - Select a framework with 100% compliance score
+  - Click "Generate Certificate" to create a digital compliance certificate
+  - Show the certificate with auto-generated number, metrics, and verification hash
+  - Download the certificate as PDF
+  - Demonstrate the certificate history view
+  - Show the revocation workflow with reason tracking
+
+#### 13.3 Regulatory Submission
+- Navigate to **Regulatory Submissions**
+- **Demonstrate the submission workflow:**
+  - Select a generated certificate
+  - Choose a regulatory authority from the pre-configured directory
+  - Select attachment types (certificate, gap analysis, evidence bundle, policies)
+  - Show the email configuration management
+  - Track submission status (Draft → Sent → Acknowledged → Feedback Received)
+  - Record authority feedback
+
+#### 13.4 AI Compliance Roadmap
+- Navigate to **Compliance Chain > Gap Analysis**
+- **Show the AI roadmap generation:**
+  - Click "Generate Roadmap" for non-compliant objectives
+  - Show the step-by-step action plan with priorities and effort estimates
+  - Highlight quick wins and dependencies
+  - Demonstrate cancellation of long-running generation
+- Navigate to **Frameworks > Objectives**
+  - Show individual objective roadmap generation
+
+#### 13.5 AI Assistant (RAG-Enhanced Chatbot)
+- Click **AI Assistant** in the sidebar
+- **Demonstrate:**
+  - Ask a compliance question (e.g., "What are the CRA requirements for vulnerability disclosure?")
+  - Show how the assistant retrieves relevant framework objectives using semantic search
+  - Explain RAG (Retrieval-Augmented Generation) and vector embeddings
+  - Show contextual, grounded responses based on actual framework content
+
+---
+
 ## 🎬 Presentation Tips
 
 ### Opening (2 minutes)
@@ -434,6 +488,11 @@ Before the presentation, ensure:
 - [ ] CTI service is running and has ingested scanner data
 - [ ] Dark web scanner service is running with Tor connectivity
 - [ ] At least 1 completed dark web scan exists for demo
+- [ ] SearXNG service is running for regulatory monitoring
+- [ ] Embeddings service is running with framework objectives embedded
+- [ ] At least 1 framework has 100% compliance score (for certificate demo)
+- [ ] At least 1 compliance certificate has been generated
+- [ ] Regulatory submission email directory is populated
 
 ---
 
@@ -455,6 +514,11 @@ Before the presentation, ensure:
 14. **SBOM Generation:** Software Bill of Materials generation with Syft
 15. **Cyber Threat Intelligence:** Unified CTI dashboard aggregating findings from all scanners with MITRE ATT&CK mapping
 16. **Dark Web Monitoring:** Tor-based dark web scanning across 23 search engines with automated PDF reports and finding categorization
+17. **Regulatory Change Monitor:** Automated web scanning for regulatory updates using self-hosted SearXNG with AI analysis and framework snapshot/revert
+18. **Compliance Certificates:** Digital certificate generation with 1-year validity, SHA256 verification, and revocation workflow
+19. **Regulatory Submissions:** Direct submission of compliance packages to regulatory authorities with pre-configured email directory
+20. **AI Compliance Roadmap:** AI-generated step-by-step action plans for achieving compliance on non-compliant objectives
+21. **RAG-Enhanced AI Assistant:** Chatbot with semantic search over framework objectives using vector embeddings for contextually grounded answers
 
 ---
 
@@ -489,7 +553,7 @@ Before the presentation, ensure:
 Focus on: Asset Registration → Risk Assessment → Assessment Questions → Reporting
 
 ### Technical Demo (45 minutes)
-Include: Architecture overview → API demonstration → Scanner integration → LLM configuration
+Include: Architecture overview → API demonstration → Scanner integration → LLM configuration → RAG embeddings → Regulatory Monitor
 
 ### Executive Demo (10 minutes)
 Focus on: Dashboard → Compliance metrics → Risk overview → Sample report

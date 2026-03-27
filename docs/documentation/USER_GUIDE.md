@@ -28,8 +28,11 @@ The CyberBridge interface consists of:
 - **Risks**: Risk Register, Risk Assessment, Incident Registration, and Security Advisories
 - **Controls**: Control Register and Controls Library
 - **Documents**: Policies, Architecture Diagrams, Evidence Library, and CRA Technical File documentation
-- **Compliance Chain**: All Links view, visual Map, and Gap Analysis
+- **Gap Analysis**: Framework compliance analysis with certificate generation and AI roadmap
+- **Regulatory Submissions**: Submit compliance documentation to regulatory authorities
+- **Compliance Chain**: All Links view and visual Map
 - **Security Tools**: Security Scanners, Code Analysis, Dependency Check, SBOM Generator, Scan Findings (if enabled)
+- **AI Assistant**: AI-powered chatbot with RAG-enhanced framework knowledge
 
 ## Dashboard
 
@@ -514,31 +517,11 @@ Track and manage your Declaration of Conformity readiness:
    - Harmonised standards and specifications referenced
 4. Track whether each mandatory element is addressed with a visual readiness indicator
 
-## Compliance Chain
-
-Visualize and manage the relationships between all compliance entities.
-
-### All Links View
-
-1. Navigate to **Compliance Chain > All Links** in the sidebar
-2. View every relationship between Assets, Risks, Controls, Policies, Objectives, and Incidents
-3. Create new links between compliance entities
-4. Delete links that are no longer relevant
-5. Search and filter links by entity type
-
-### Visual Map
-
-1. Navigate to **Compliance Chain > Map** in the sidebar
-2. View an interactive graph visualization of all compliance relationships
-3. Click on any entity to navigate its connections
-4. Identify gaps where entities lack proper linkage
-5. Ensure complete traceability across your compliance program
-
-### Gap Analysis
+## Gap Analysis
 
 Assess compliance gaps across your frameworks with a dedicated analysis dashboard.
 
-1. Navigate to **Compliance Chain > Gap Analysis** in the sidebar
+1. Navigate to **Gap Analysis** in the sidebar
 2. Select a framework from the dropdown to generate the analysis
 3. Review the compliance overview:
    - **Overall Compliance Score**: Aggregated percentage across all objectives
@@ -564,6 +547,90 @@ Assess compliance gaps across your frameworks with a dedicated analysis dashboar
    - Objectives without linked policies
    - Each gap entry shows the objective title, chapter, and current compliance status
 9. Click **Export to PDF** to generate a gap analysis report for stakeholders or auditors
+
+### Compliance Certificate
+
+Generate digital compliance certificates when a framework achieves 100% compliance.
+
+1. Within the Gap Analysis page, if the overall compliance score is 100%, a "Generate Certificate" button appears
+2. Click "Generate Certificate" to create a digitally signed compliance certificate
+3. The certificate includes:
+   - Certificate number (auto-generated, e.g., `CRA-2024-00001`)
+   - Organization and framework details
+   - Compliance metrics (objectives %, assessments %, policies %)
+   - Issue date and expiry date (valid for 1 year)
+   - SHA256 verification hash for public verification
+4. Download the certificate as PDF
+5. View certificate history with issue dates, expiry dates, and status
+6. Revoke certificates with a reason if compliance status changes
+7. Verify any certificate using its verification hash via the public verification endpoint
+
+### AI Compliance Roadmap
+
+Generate AI-powered step-by-step action plans for achieving compliance on non-compliant objectives.
+
+1. Within the Gap Analysis page, click "Generate Roadmap" to create roadmaps for all non-compliant objectives
+2. The AI analyzes each objective's current status, assessment answers, linked policies, evidence, and CTI data
+3. Each roadmap includes:
+   - Gap summary and risk analysis
+   - Step-by-step action items with priority (critical/high/medium/low), estimated effort, and category (technical/policy/evidence/process/training)
+   - Quick wins for immediate progress
+   - Dependencies between actions
+   - Risk assessment if the gap remains unaddressed
+4. Roadmaps can also be generated for individual objectives from the Objectives Checklist page
+5. Cancel long-running roadmap generation at any time
+
+## Compliance Chain
+
+Visualize and manage the relationships between all compliance entities.
+
+### All Links View
+
+1. Navigate to **Compliance Chain > All Links** in the sidebar
+2. View every relationship between Assets, Risks, Controls, Policies, Objectives, and Incidents
+3. Create new links between compliance entities
+4. Delete links that are no longer relevant
+5. Search and filter links by entity type
+
+### Visual Map
+
+1. Navigate to **Compliance Chain > Map** in the sidebar
+2. View an interactive graph visualization of all compliance relationships
+3. Click on any entity to navigate its connections
+4. Identify gaps where entities lack proper linkage
+5. Ensure complete traceability across your compliance program
+
+## Regulatory Submissions
+
+Submit compliance documentation to regulatory authorities directly from the platform.
+
+### Creating a Submission
+
+1. Navigate to **Regulatory Submissions** in the sidebar
+2. Select a compliance certificate to include (required)
+3. Choose the target regulatory authority from the directory or enter custom email addresses
+4. Select attachment types to include:
+   - **Compliance Certificate**: The generated PDF certificate
+   - **Gap Analysis Report**: Current gap analysis for the framework
+   - **Evidence Bundle**: ZIP archive of all evidence files
+   - **Policies**: PDF export of linked policies
+5. Add multiple recipient email addresses if needed
+6. Click "Submit" to send the documentation package
+
+### Authority Email Directory
+
+1. View pre-configured email addresses for common regulatory bodies (NIST, CISA, EU-NTA, ENISA, etc.)
+2. Add custom authority email configurations for your organization
+3. Delete custom entries that are no longer needed
+4. Default entries cannot be deleted
+
+### Tracking Submissions
+
+1. View all submissions in the history table
+2. Track submission status: Draft, Sent, Acknowledged, Feedback Received
+3. Manually mark submissions as "Sent" (for portal-based submissions)
+4. Mark submissions as "Acknowledged" when the authority confirms receipt
+5. Record feedback received from authorities with timestamps
 
 ## Security Tools
 
@@ -656,6 +723,25 @@ View and manage aggregated findings across all security scanners in one place.
 1. Click the delete button on a scan group to remove the scan and all its findings
 2. Confirm the deletion in the dialog
 3. This is a permanent action and cannot be undone
+
+## AI Assistant
+
+The AI Assistant is a RAG-enhanced chatbot that provides contextual compliance guidance using your organization's framework data.
+
+### Using the AI Assistant
+
+1. Click **AI Assistant** in the sidebar to open the chat drawer
+2. Ask questions about compliance requirements, framework objectives, or security best practices
+3. The assistant uses semantic search to retrieve relevant framework objectives and provides contextually grounded answers
+4. Conversation history is maintained within the session
+
+### How RAG Works
+
+The AI Assistant uses Retrieval-Augmented Generation (RAG) to enhance responses:
+- Framework objectives are embedded as vectors using the Embeddings microservice
+- When you ask a question, the system finds the most relevant objectives using cosine similarity
+- The top 5 matching objectives are injected as context for the AI response
+- This ensures answers are grounded in your actual compliance framework content
 
 ## CRA Assessments
 

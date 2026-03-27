@@ -112,14 +112,29 @@ Create and manage compliance frameworks for your organization.
 3. Use CSV Upload for bulk import of questions
 4. Edit or delete existing questions
 
-### Framework Updates
+### Framework Updates & Regulatory Change Monitor
 
 1. Navigate to **Frameworks > Configuration > Framework Updates**
 2. Track version changes to frameworks
-3. Review and approve updates to framework structure before rollout
-4. Manage framework versioning across your organization
-5. Compare previous and updated framework content
-6. Schedule rollout of approved framework updates to assessments and objectives
+3. **Regulatory Change Monitor**:
+   - Select a framework to monitor from the dropdown
+   - Click "Scan for Changes" to trigger a web search for regulatory updates
+   - The system uses SearXNG (self-hosted meta-search engine) to scan Google, Bing, DuckDuckGo, and Google Scholar for regulatory changes
+   - Also queries EUR-Lex and NIST APIs for official regulatory updates
+   - View scan run history with timestamps and result counts
+4. **LLM Analysis**:
+   - After a scan completes, click "Analyze" to trigger AI analysis of findings against your current framework
+   - The AI compares web search results with your framework's chapters, objectives, and questions
+   - Detected changes are listed with impact assessment and affected framework elements
+5. **Review and Apply Changes**:
+   - Review each detected change and approve or reject it
+   - Apply approved changes to your organization's framework
+   - Super admins can also generate seed update files for system-wide framework updates
+6. **Framework Snapshots**:
+   - Before applying changes, the system automatically creates a versioned snapshot
+   - View the snapshot timeline to see framework evolution over time
+   - Revert to any previous snapshot if needed
+7. Compare previous and updated framework content
 
 ### Compliance Advisor (AI)
 
@@ -286,6 +301,51 @@ View and manage relationships between all compliance entities.
    - Objectives marked as not compliant
    - Objectives without linked policies
 7. Export the gap analysis to PDF for reporting and audit documentation
+
+### Compliance Certificate
+
+Generate digital compliance certificates for frameworks with 100% compliance.
+
+1. Within the Gap Analysis page, if the compliance score is 100%, click "Generate Certificate"
+2. The certificate includes: auto-generated certificate number, organization/framework details, compliance metrics, issue/expiry dates (1-year validity), and SHA256 verification hash
+3. Download certificates as PDF
+4. View certificate history with status tracking
+5. Revoke certificates with a documented reason if compliance status changes
+6. Verify certificates using the public verification endpoint
+
+### AI Compliance Roadmap
+
+Generate AI-powered action plans for non-compliant objectives.
+
+1. Click "Generate Roadmap" in the Gap Analysis page for bulk roadmap generation
+2. The AI analyzes objectives, assessments, policies, evidence, and CTI data to produce step-by-step action plans
+3. Each roadmap includes: gap summary, prioritized action steps, estimated effort, quick wins, dependencies, and risk analysis
+4. Generate roadmaps for individual objectives from the Objectives Checklist page
+5. Cancel long-running roadmap generation at any time
+
+## Regulatory Submissions
+
+Submit compliance documentation packages to regulatory authorities.
+
+### Creating a Submission
+
+1. Navigate to **Regulatory Submissions** in the sidebar
+2. Select a compliance certificate and target authority
+3. Choose attachment types: certificate, gap analysis, evidence bundle, policies
+4. Add recipient email addresses (from directory or custom)
+5. Submit the documentation package
+
+### Authority Email Directory
+
+1. View pre-configured emails for regulatory bodies (NIST, CISA, EU-NTA, ENISA, etc.)
+2. Add custom authority email configurations
+3. Default entries are read-only
+
+### Tracking Submissions
+
+1. View submission history with status tracking (Draft, Sent, Acknowledged, Feedback Received)
+2. Mark submissions as sent or acknowledged
+3. Record authority feedback with timestamps
 
 ## Documents
 
@@ -537,6 +597,15 @@ View relationships between compliance elements:
 5. Review suggestions with confidence scores
 6. Manage all correlations in a searchable table
 
+### AI Assistant (RAG-Enhanced Chatbot)
+
+The AI Assistant uses Retrieval-Augmented Generation to provide contextual compliance guidance:
+
+1. Click **AI Assistant** in the sidebar to open the chat drawer
+2. Ask questions about compliance requirements or framework objectives
+3. The assistant retrieves relevant framework objectives using semantic search (pgvector embeddings) and provides grounded answers
+4. Conversation history is maintained within the session
+
 ### Activity Log (History)
 
 Track all actions in your organization:
@@ -557,6 +626,7 @@ Monitor scheduled and running tasks:
 5. Track database synchronization tasks and processing history
 6. View history cleanup configuration and trigger manual cleanup
 7. Monitor backup status and history
+8. **Regulatory Monitor Settings**: View and edit regulatory monitor configuration including scan intervals and enabled sources
 
 ### Organization Settings
 
@@ -713,6 +783,16 @@ CyberBridge provides two public assessment tools accessible from the login page 
 - Verify Tor connectivity within the container
 - Review queue overview for worker status
 - Scans stuck in processing for >30 minutes are auto-recovered on service restart
+
+## Role Permission Matrix
+
+| Feature | Org User | Org Admin | Super Admin |
+|---------|----------|-----------|-------------|
+| Regulatory Submissions | Yes | Yes | Yes |
+| Compliance Certificates | Yes | Yes | Yes |
+| AI Compliance Roadmap | Yes | Yes | Yes |
+| AI Assistant (RAG) | Yes | Yes | Yes |
+| Regulatory Monitor | No | Yes | Yes |
 
 ## Getting Support
 

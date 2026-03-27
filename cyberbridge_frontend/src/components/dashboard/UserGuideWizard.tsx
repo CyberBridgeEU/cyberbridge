@@ -120,7 +120,12 @@ const steps = [
                 'Export assessment results and reports as PDF for sharing with stakeholders.',
                 'Check the Correlations page to see how risks, policies, and objectives connect across frameworks.',
                 'Use the dashboard statistics to monitor your overall compliance health at a glance.',
-                'The Setup Wizard on the home page can walk you through initial configuration if needed.'
+                'The Setup Wizard on the home page can walk you through initial configuration if needed.',
+                'Use the AI Assistant in the sidebar for RAG-enhanced compliance guidance based on your framework objectives.',
+                'Generate AI Compliance Roadmaps from Gap Analysis to get step-by-step action plans for non-compliant objectives.',
+                'When you reach 100% compliance, generate a Compliance Certificate from the Gap Analysis page.',
+                'Submit compliance documentation to regulatory authorities directly via Regulatory Submissions.',
+                'The Regulatory Change Monitor scans the web for framework updates and helps you stay current with regulations.'
             ]
         }
     }
