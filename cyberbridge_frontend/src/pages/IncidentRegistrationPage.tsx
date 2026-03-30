@@ -3,6 +3,8 @@ import type { FilterDropdownProps } from 'antd/es/table/interface';
 import Sidebar from "../components/Sidebar.tsx";
 import { PlusOutlined, EditOutlined, DashboardOutlined, WarningOutlined, ExclamationCircleOutlined, InfoCircleOutlined, CheckCircleOutlined, AlertOutlined, SearchOutlined, ThunderboltOutlined, DeleteOutlined, UnorderedListOutlined, AppstoreOutlined, LinkOutlined, SyncOutlined, BugOutlined, GlobalOutlined, ToolOutlined, AuditOutlined, ClockCircleOutlined, SafetyOutlined } from '@ant-design/icons';
 import useIncidentStore from "../store/useIncidentStore.ts";
+import useEvidenceStore from "../store/useEvidenceStore.ts";
+import ForensicTimeline from "../components/ForensicTimeline.tsx";
 import useFrameworksStore from "../store/useFrameworksStore.ts";
 import useRiskStore from "../store/useRiskStore.ts";
 import useAssetStore from "../store/useAssetStore.ts";
@@ -89,9 +91,15 @@ const IncidentRegistrationPage = () => {
         fetchENISANotification,
         createENISANotification,
         updateENISANotification,
-        fetchPostMarketMetrics
+        fetchPostMarketMetrics,
+        linkedEvidence,
+        fetchForensicTimeline,
+        fetchLinkedEvidence,
+        linkEvidence,
+        unlinkEvidence
     } = useIncidentStore();
 
+    const { evidence: evidenceItems, fetchEvidence } = useEvidenceStore();
     const { frameworks, fetchFrameworks } = useFrameworksStore();
     const { risks, fetchRisks } = useRiskStore();
     const { assets, fetchAssets } = useAssetStore();
@@ -150,6 +158,7 @@ const IncidentRegistrationPage = () => {
     const [patchResolutionDate, setPatchResolutionDate] = useState<dayjs.Dayjs | null>(null);
 
     const [selectedEnisaIncident, setSelectedEnisaIncident] = useState<string | undefined>(undefined);
+    const [selectedTimelineIncident, setSelectedTimelineIncident] = useState<string | undefined>(undefined);
 
     // AI Analysis state
     const [selectedAnalysisIncident, setSelectedAnalysisIncident] = useState<string | undefined>(undefined);
@@ -182,6 +191,7 @@ const IncidentRegistrationPage = () => {
             await fetchFrameworks();
             await fetchRisks();
             await fetchAssets();
+            await fetchEvidence();
         };
         fetchData();
     }, []);
@@ -2236,6 +2246,44 @@ const IncidentRegistrationPage = () => {
                                     ) : (
                                         <Empty description="Select an incident to manage ENISA reporting" />
                                     )}
+                                </div>
+                            )
+                        },
+                        {
+                            key: 'forensic-timeline',
+                            label: <span><ClockCircleOutlined /> Forensic Timeline</span>,
+                            children: (
+                                <div>
+                                    <div style={{ marginBottom: 16 }}>
+                                        <Select
+                                            placeholder="Select an incident..."
+                                            options={incidents.map(i => ({
+                                                label: `${i.incident_code || i.id.slice(0, 8)} — ${i.title}`,
+                                                value: i.id
+                                            }))}
+                                            value={selectedTimelineIncident}
+                                            onChange={(val) => {
+                                                setSelectedTimelineIncident(val);
+                                            }}
+                                            style={{ width: 380 }}
+                                            showSearch
+                                            filterOption={(input, option) =>
+                                                (option?.label as string || '').toLowerCase().includes(input.toLowerCase())
+                                            }
+                                        />
+                                    </div>
+                                    <ForensicTimeline
+                                        incidentId={selectedTimelineIncident || null}
+                                        availableEvidence={evidenceItems.map(e => ({
+                                            id: e.id,
+                                            name: e.name,
+                                            evidence_type: e.evidence_type,
+                                            custody_status: null,
+                                            collection_method: e.collection_method,
+                                            status: e.status,
+                                            linked_at: null
+                                        }))}
+                                    />
                                 </div>
                             )
                         }

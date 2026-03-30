@@ -1895,6 +1895,13 @@ class IncidentAsset(Base):
     created_at = Column(DateTime, default=func.now())
 
 
+class IncidentEvidence(Base):
+    __tablename__ = "incident_evidence"
+    incident_id = Column(UUID(as_uuid=True), ForeignKey("incidents.id", ondelete="CASCADE"), primary_key=True)
+    evidence_id = Column(UUID(as_uuid=True), ForeignKey("evidence_library_items.id", ondelete="CASCADE"), primary_key=True)
+    created_at = Column(DateTime, default=func.now())
+
+
 class RiskTemplateCategory(Base):
     """Risk template categories"""
     __tablename__ = "risk_template_categories"

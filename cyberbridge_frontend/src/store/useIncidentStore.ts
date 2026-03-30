@@ -108,6 +108,25 @@ export interface ENISANotification {
     updated_at: string;
 }
 
+export interface ForensicTimelineEvent {
+    timestamp: string | null;
+    event_type: 'incident_created' | 'field_updated' | 'patch_released' | 'enisa_notification' | 'advisory_published' | 'evidence_linked';
+    title: string;
+    description: string;
+    actor: string | null;
+    metadata: Record<string, any>;
+}
+
+export interface LinkedEvidence {
+    id: string;
+    name: string;
+    evidence_type: string;
+    custody_status: string | null;
+    collection_method: string | null;
+    status: string;
+    linked_at: string | null;
+}
+
 export interface PostMarketMetrics {
     total_incidents: number;
     open_vulnerabilities: number;
@@ -138,6 +157,9 @@ export interface IncidentStore {
     enisaNotification: ENISANotification | null;
     postMarketMetrics: PostMarketMetrics | null;
     metricsLoading: boolean;
+    forensicTimeline: ForensicTimelineEvent[];
+    timelineLoading: boolean;
+    linkedEvidence: LinkedEvidence[];
 
     fetchIncidents: () => Promise<boolean>;
     fetchIncidentStatuses: () => Promise<boolean>;
@@ -165,6 +187,10 @@ export interface IncidentStore {
     createENISANotification: (incidentId: string, data?: any) => Promise<boolean>;
     updateENISANotification: (notificationId: string, data: any) => Promise<boolean>;
     fetchPostMarketMetrics: () => Promise<void>;
+    fetchForensicTimeline: (incidentId: string) => Promise<void>;
+    fetchLinkedEvidence: (incidentId: string) => Promise<void>;
+    linkEvidence: (incidentId: string, evidenceId: string) => Promise<boolean>;
+    unlinkEvidence: (incidentId: string, evidenceId: string) => Promise<boolean>;
 }
 
 const useIncidentStore = create<IncidentStore>((set) => ({
@@ -180,6 +206,9 @@ const useIncidentStore = create<IncidentStore>((set) => ({
     enisaNotification: null,
     postMarketMetrics: null,
     metricsLoading: false,
+    forensicTimeline: [],
+    timelineLoading: false,
+    linkedEvidence: [],
 
     fetchIncidents: async () => {
         set({error: null});
@@ -579,6 +608,68 @@ const useIncidentStore = create<IncidentStore>((set) => ({
             return true;
         } catch (error) {
             console.error('Error updating ENISA notification:', error);
+            return false;
+        }
+    },
+
+    // Forensic timeline
+    fetchForensicTimeline: async (incidentId) => {
+        set({ timelineLoading: true });
+        try {
+            const response = await fetch(`${cyberbridge_back_end_rest_api}/incidents/${incidentId}/timeline`, {
+                headers: { ...useAuthStore.getState().getAuthHeader() }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                set({ forensicTimeline: data.events || [], timelineLoading: false });
+            } else {
+                set({ forensicTimeline: [], timelineLoading: false });
+            }
+        } catch (error) {
+            console.error('Error fetching forensic timeline:', error);
+            set({ forensicTimeline: [], timelineLoading: false });
+        }
+    },
+
+    fetchLinkedEvidence: async (incidentId) => {
+        try {
+            const response = await fetch(`${cyberbridge_back_end_rest_api}/incidents/${incidentId}/evidence`, {
+                headers: { ...useAuthStore.getState().getAuthHeader() }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                set({ linkedEvidence: data });
+            } else {
+                set({ linkedEvidence: [] });
+            }
+        } catch (error) {
+            console.error('Error fetching linked evidence:', error);
+            set({ linkedEvidence: [] });
+        }
+    },
+
+    linkEvidence: async (incidentId, evidenceId) => {
+        try {
+            const response = await fetch(`${cyberbridge_back_end_rest_api}/incidents/${incidentId}/evidence/${evidenceId}`, {
+                method: 'POST',
+                headers: { ...useAuthStore.getState().getAuthHeader() }
+            });
+            return response.ok;
+        } catch (error) {
+            console.error('Error linking evidence:', error);
+            return false;
+        }
+    },
+
+    unlinkEvidence: async (incidentId, evidenceId) => {
+        try {
+            const response = await fetch(`${cyberbridge_back_end_rest_api}/incidents/${incidentId}/evidence/${evidenceId}`, {
+                method: 'DELETE',
+                headers: { ...useAuthStore.getState().getAuthHeader() }
+            });
+            return response.ok;
+        } catch (error) {
+            console.error('Error unlinking evidence:', error);
             return false;
         }
     },

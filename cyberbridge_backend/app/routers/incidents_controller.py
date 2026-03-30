@@ -7,6 +7,7 @@ import uuid
 import logging
 
 from ..repositories import incidents_repository, history_repository, incident_patches_repository, enisa_repository
+from ..services import incident_forensic_timeline_service
 from ..dtos import schemas
 from ..database.database import get_db
 from ..services.auth_service import get_current_active_user
@@ -392,3 +393,64 @@ def update_enisa_notification(notification_id: str, data: schemas.ENISANotificat
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error updating ENISA notification: {str(e)}")
+
+
+# ===========================
+# Forensic Timeline Endpoints
+# ===========================
+
+@router.get("/{incident_id}/timeline")
+def get_forensic_timeline(incident_id: str, db: Session = Depends(get_db), current_user: schemas.UserBase = Depends(get_current_active_user)):
+    try:
+        incident = incidents_repository.get_incident(db, uuid.UUID(incident_id), current_user)
+        if not incident:
+            raise HTTPException(status_code=404, detail="Incident not found")
+        events = incident_forensic_timeline_service.get_incident_timeline(db, uuid.UUID(incident_id), current_user)
+        return {"incident_id": incident_id, "events": events, "total": len(events)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching timeline for incident {incident_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error fetching forensic timeline: {str(e)}")
+
+
+@router.get("/{incident_id}/evidence")
+def get_linked_evidence(incident_id: str, db: Session = Depends(get_db), current_user: schemas.UserBase = Depends(get_current_active_user)):
+    try:
+        incident = incidents_repository.get_incident(db, uuid.UUID(incident_id), current_user)
+        if not incident:
+            raise HTTPException(status_code=404, detail="Incident not found")
+        return incident_forensic_timeline_service.get_linked_evidence(db, uuid.UUID(incident_id))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching linked evidence: {str(e)}")
+
+
+@router.post("/{incident_id}/evidence/{evidence_id}")
+def link_evidence_to_incident(incident_id: str, evidence_id: str, db: Session = Depends(get_db), current_user: schemas.UserBase = Depends(get_current_active_user)):
+    try:
+        incident = incidents_repository.get_incident(db, uuid.UUID(incident_id), current_user)
+        if not incident:
+            raise HTTPException(status_code=404, detail="Incident not found")
+        success = incident_forensic_timeline_service.link_evidence(db, uuid.UUID(incident_id), uuid.UUID(evidence_id))
+        if not success:
+            raise HTTPException(status_code=409, detail="Evidence already linked to this incident")
+        return {"message": "Evidence linked successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error linking evidence: {str(e)}")
+
+
+@router.delete("/{incident_id}/evidence/{evidence_id}")
+def unlink_evidence_from_incident(incident_id: str, evidence_id: str, db: Session = Depends(get_db), current_user: schemas.UserBase = Depends(get_current_active_user)):
+    try:
+        success = incident_forensic_timeline_service.unlink_evidence(db, uuid.UUID(incident_id), uuid.UUID(evidence_id))
+        if not success:
+            raise HTTPException(status_code=404, detail="Evidence link not found")
+        return {"message": "Evidence unlinked successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error unlinking evidence: {str(e)}")
