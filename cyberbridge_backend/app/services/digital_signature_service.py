@@ -32,8 +32,10 @@ from sqlalchemy.orm import Session
 from app.models import models
 
 
-# ── Key derivation (mirrors backup_service pattern) ───────────────────────────
-_KDF_SALT = b"cyberbridge_signing_salt_2026"
+# ── Key derivation ────────────────────────────────────────────────────────────
+# Salt read from environment — fall back to a default only in development.
+# In production set SIGNING_KDF_SALT to a long random string.
+_KDF_SALT = os.environ.get("SIGNING_KDF_SALT", "cyberbridge_signing_salt_2026").encode()
 _KDF_ITERATIONS = 480_000
 
 

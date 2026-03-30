@@ -23,3 +23,5 @@ Pillow==12.1.1
 beautifulsoup4==4.14.3
 Authlib==1.6.8
 pgvector>=0.3.6
+cryptography==46.0.6
+pyasn1==0.6.3
