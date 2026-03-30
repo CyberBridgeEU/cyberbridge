@@ -1152,6 +1152,10 @@ class AuditSignOff(Base):
     ip_address = Column(String(50), nullable=True)
     user_agent = Column(Text, nullable=True)
 
+    # Digital signature fields
+    signature = Column(Text, nullable=True)                  # hex-encoded RSA signature
+    signing_key_id = Column(UUID(as_uuid=True), ForeignKey("org_signing_keys.id"), nullable=True)
+
     created_at = Column(DateTime, default=func.now())
 
     # Relationships
@@ -2547,6 +2551,22 @@ class RegulatoryChange(Base):
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
 
+class OrgSigningKey(Base):
+    """One RSA-2048 key pair per organisation for digital signing."""
+    __tablename__ = "org_signing_keys"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organisation_id = Column(UUID(as_uuid=True), ForeignKey("organisations.id", ondelete="CASCADE"), nullable=False)
+    public_key_pem = Column(Text, nullable=False)           # PEM — safe to expose
+    encrypted_private_key = Column(Text, nullable=False)    # Fernet-encrypted PEM
+    algorithm = Column(String(50), nullable=False, default="RSA-2048-PKCS1v15-SHA256")
+    revoked = Column(Boolean, default=False, nullable=False)
+    revoked_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=func.now())
+
+    organisation = relationship("Organisations", foreign_keys=[organisation_id])
+
+
 class ComplianceCertificate(Base):
     __tablename__ = "compliance_certificates"
 
@@ -2566,6 +2586,9 @@ class ComplianceCertificate(Base):
     revoked_reason = Column(Text, nullable=True)
     verification_hash = Column(String(64), unique=True, nullable=False)
     pdf_data = Column(LargeBinary, nullable=True)
+    # Digital signature fields
+    signature = Column(Text, nullable=True)                  # hex-encoded RSA signature
+    signing_key_id = Column(UUID(as_uuid=True), ForeignKey("org_signing_keys.id"), nullable=True)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 

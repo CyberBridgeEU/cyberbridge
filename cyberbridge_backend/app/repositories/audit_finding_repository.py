@@ -287,7 +287,9 @@ def create_sign_off(
     ip_address: Optional[str] = None,
     user_agent: Optional[str] = None
 ):
-    """Create a new sign-off"""
+    """Create a new sign-off with a digital signature."""
+    from app.services import digital_signature_service
+
     sign_off = models.AuditSignOff(
         id=uuid.uuid4(),
         engagement_id=engagement_id,
@@ -302,6 +304,32 @@ def create_sign_off(
     )
 
     db.add(sign_off)
+    db.flush()  # populate sign_off.id and signed_at without a full commit
+
+    # Resolve org_id via engagement → assessment → framework
+    try:
+        engagement = db.query(models.AuditEngagement).filter(
+            models.AuditEngagement.id == engagement_id
+        ).first()
+        if engagement:
+            assessment = db.query(models.Assessment).filter(
+                models.Assessment.id == engagement.assessment_id
+            ).first()
+            if assessment:
+                framework = db.query(models.Framework).filter(
+                    models.Framework.id == assessment.framework_id
+                ).first()
+                if framework:
+                    payload = digital_signature_service.sign_off_payload(sign_off)
+                    sig_hex, key_id = digital_signature_service.sign_payload(
+                        payload, framework.organisation_id, db
+                    )
+                    sign_off.signature = sig_hex
+                    sign_off.signing_key_id = key_id
+    except Exception:
+        # Signing is non-blocking — sign-off is still created if signing fails
+        pass
+
     db.commit()
     db.refresh(sign_off)
 
