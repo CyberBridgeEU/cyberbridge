@@ -2591,6 +2591,43 @@ class RegulatoryChange(Base):
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
 
+class LegalHold(Base):
+    """
+    A legal hold prevents deletion or modification of a target record.
+    Supports evidence items and audit engagements.
+    Multiple holds can exist per target; any active hold blocks deletion.
+    """
+    __tablename__ = "legal_holds"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+
+    # Polymorphic target — evidence | engagement
+    target_type = Column(String(50), nullable=False)
+    target_id = Column(UUID(as_uuid=True), nullable=False)
+    organisation_id = Column(UUID(as_uuid=True), ForeignKey("organisations.id"), nullable=False)
+
+    # Why the hold was applied
+    reason = Column(String(100), nullable=False)      # litigation | regulatory_inquiry | investigation | other
+    case_reference = Column(String(255), nullable=True)  # external ticket / case number
+
+    # Who applied it
+    applied_by_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    applied_at = Column(DateTime, nullable=False, default=func.now())
+    expires_at = Column(DateTime, nullable=True)      # None = indefinite
+
+    # Lifting
+    status = Column(String(20), nullable=False, default="active")  # active | lifted | expired
+    lifted_at = Column(DateTime, nullable=True)
+    lifted_by_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    lift_reason = Column(Text, nullable=True)
+
+    created_at = Column(DateTime, default=func.now())
+
+    organisation = relationship("Organisations", foreign_keys=[organisation_id])
+    applied_by = relationship("User", foreign_keys=[applied_by_user_id])
+    lifted_by = relationship("User", foreign_keys=[lifted_by_user_id])
+
+
 class TimestampToken(Base):
     """Stores RFC 3161 trusted timestamp tokens from a third-party TSA."""
     __tablename__ = "timestamp_tokens"

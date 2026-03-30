@@ -11,6 +11,7 @@ from app.database.database import get_db
 from app.dtos import schemas
 from app.models import models
 from app.services.auth_service import get_current_active_user
+from app.services import legal_hold_service
 
 router = APIRouter(prefix="/evidence", tags=["Evidence Library"])
 
@@ -277,6 +278,19 @@ def delete_evidence(
         raise HTTPException(status_code=404, detail="Evidence not found")
     if current_user.role_name != "super_admin" and item.organisation_id != current_user.organisation_id:
         raise HTTPException(status_code=403, detail="Not authorized to delete this evidence")
+
+    # Legal hold guard — HTTP 423 Locked
+    hold = legal_hold_service.get_active_hold(db, "evidence", item.id)
+    if hold:
+        raise HTTPException(
+            status_code=423,
+            detail=(
+                f"Evidence is under legal hold and cannot be deleted. "
+                f"Reason: {hold.reason}. "
+                f"Case: {hold.case_reference or 'N/A'}. "
+                f"Hold ID: {hold.id}. Contact your compliance officer to lift the hold."
+            )
+        )
 
     db.query(models.EvidenceLibraryFramework).filter(
         models.EvidenceLibraryFramework.evidence_id == item.id
