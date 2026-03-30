@@ -251,10 +251,48 @@ class EvidenceLibraryItem(Base):
     collection_method = Column(String(50), nullable=False)
     audit_notes = Column(Text, nullable=True)
     organisation_id = Column(UUID(as_uuid=True), ForeignKey("organisations.id"), nullable=False)
+    # Chain of custody
+    custody_status = Column(String(50), nullable=True, default="collected")
+    # collected | in_review | with_auditor | with_authority | released
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
     organisation = relationship("Organisations", foreign_keys=[organisation_id])
+
+
+class CustodyTransfer(Base):
+    """
+    Records every custody handoff for an evidence item.
+    Entries are hash-chained so any insertion, deletion, or modification
+    of a transfer record is immediately detectable.
+    """
+    __tablename__ = "custody_transfers"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    evidence_id = Column(UUID(as_uuid=True), ForeignKey("evidence_library_items.id", ondelete="CASCADE"), nullable=False)
+
+    # Who transferred (internal user or auditor)
+    from_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    from_auditor_id = Column(UUID(as_uuid=True), ForeignKey("auditor_invitations.id"), nullable=True)
+    from_label = Column(String(255), nullable=True)   # display name captured at transfer time
+
+    # Who received
+    to_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    to_auditor_id = Column(UUID(as_uuid=True), ForeignKey("auditor_invitations.id"), nullable=True)
+    to_label = Column(String(255), nullable=True)     # display name captured at transfer time
+
+    reason = Column(String(100), nullable=False)      # collection | review | audit | authority | release
+    notes = Column(Text, nullable=True)
+    custody_status_after = Column(String(50), nullable=False)  # status set on evidence after this transfer
+    ip_address = Column(String(50), nullable=True)
+    transferred_at = Column(DateTime, nullable=False, default=func.now())
+
+    # Hash chain fields
+    transfer_index = Column(Integer, nullable=False)
+    previous_transfer_hash = Column(String(64), nullable=False)
+    transfer_hash = Column(String(64), nullable=False)
+
+    evidence = relationship("EvidenceLibraryItem", foreign_keys=[evidence_id])
 
 
 class EvidenceLibraryFramework(Base):
