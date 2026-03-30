@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.models import models
 from app.repositories import gap_analysis_repository, certificate_repository
-from app.services import digital_signature_service
+from app.services import digital_signature_service, timestamp_authority_service
 
 
 # Framework name to abbreviation mapping
@@ -105,7 +105,15 @@ def generate_certificate(db: Session, current_user, framework_id: uuid.UUID) -> 
     cert.signing_key_id = signing_key_id
     db.commit()
 
-    # 8. Generate PDF and save (includes signature in footer)
+    # 8. Request a trusted RFC 3161 timestamp (non-blocking — skipped if TSA unreachable)
+    ts_token = timestamp_authority_service.request_timestamp(
+        payload, db, target_type="certificate", target_id=cert.id
+    )
+    if ts_token:
+        cert.timestamp_token_id = ts_token.id
+        db.commit()
+
+    # 9. Generate PDF and save (includes signature in footer)
     pdf_buffer = _generate_certificate_pdf(
         cert_number=cert_number,
         organisation_name=organisation.name,

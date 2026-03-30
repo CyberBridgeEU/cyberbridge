@@ -7,7 +7,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
 from app.database.database import Base, engine, get_db
-from app.routers import users_controller, frameworks_controller, questions_controller, assessments_controller, answers_controller, auth_controller, objectives_controller, risks_controller, policies_controller, home_controller, assessment_types_controller, settings_controller, admin_controller, history_controller, ai_tools_controller, scanners_controller, scopes_controller, backups_controller, audit_engagements_controller, auditor_auth_controller, auditor_review_controller, audit_comments_controller, audit_findings_controller, evidence_integrity_controller, audit_export_controller, audit_dashboard_controller, nvd_controller, audit_notifications_controller, onboarding_controller, policy_aligner_controller, assets_controller, controls_controller, architecture_controller, evidence_controller, compliance_advisor_controller, incidents_controller, euvd_controller, risk_assessments_controller, ce_marking_controller, advisories_controller, gap_analysis_controller, chain_map_controller, suggestions_controller, chatbot_controller, cti_controller, dark_web_controller, api_keys_controller, regulatory_monitor_controller, certificate_controller, submission_controller, audit_log_chain_controller, digital_signature_controller
+from app.routers import users_controller, frameworks_controller, questions_controller, assessments_controller, answers_controller, auth_controller, objectives_controller, risks_controller, policies_controller, home_controller, assessment_types_controller, settings_controller, admin_controller, history_controller, ai_tools_controller, scanners_controller, scopes_controller, backups_controller, audit_engagements_controller, auditor_auth_controller, auditor_review_controller, audit_comments_controller, audit_findings_controller, evidence_integrity_controller, audit_export_controller, audit_dashboard_controller, nvd_controller, audit_notifications_controller, onboarding_controller, policy_aligner_controller, assets_controller, controls_controller, architecture_controller, evidence_controller, compliance_advisor_controller, incidents_controller, euvd_controller, risk_assessments_controller, ce_marking_controller, advisories_controller, gap_analysis_controller, chain_map_controller, suggestions_controller, chatbot_controller, cti_controller, dark_web_controller, api_keys_controller, regulatory_monitor_controller, certificate_controller, submission_controller, audit_log_chain_controller, digital_signature_controller, timestamp_controller
 from app.seeds import SeedManager
 from app.config.environment import get_api_base_url, get_environment_name
 from app.services import history_cleanup_service, backup_service, nvd_service, euvd_service, scan_scheduler_service
@@ -119,6 +119,7 @@ app.include_router(certificate_controller.router)
 app.include_router(submission_controller.router)
 app.include_router(audit_log_chain_controller.router)
 app.include_router(digital_signature_controller.router)
+app.include_router(timestamp_controller.router)
 
 # Initialize scheduler
 scheduler = AsyncIOScheduler()

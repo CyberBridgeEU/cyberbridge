@@ -1155,6 +1155,8 @@ class AuditSignOff(Base):
     # Digital signature fields
     signature = Column(Text, nullable=True)                  # hex-encoded RSA signature
     signing_key_id = Column(UUID(as_uuid=True), ForeignKey("org_signing_keys.id"), nullable=True)
+    # RFC 3161 trusted timestamp
+    timestamp_token_id = Column(UUID(as_uuid=True), ForeignKey("timestamp_tokens.id"), nullable=True)
 
     created_at = Column(DateTime, default=func.now())
 
@@ -2551,6 +2553,23 @@ class RegulatoryChange(Base):
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
 
+class TimestampToken(Base):
+    """Stores RFC 3161 trusted timestamp tokens from a third-party TSA."""
+    __tablename__ = "timestamp_tokens"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    target_type = Column(String(50), nullable=False)   # certificate | sign_off
+    target_id = Column(UUID(as_uuid=True), nullable=False)
+    tsa_url = Column(String(255), nullable=False)
+    hash_algorithm = Column(String(20), nullable=False, default="SHA-256")
+    payload_hash = Column(String(64), nullable=False)  # hex SHA-256 of signed payload
+    token_b64 = Column(Text, nullable=False)           # base64-encoded raw DER response
+    gen_time = Column(DateTime, nullable=True)         # trusted timestamp extracted from token
+    tsa_serial = Column(Text, nullable=True)            # TSA-assigned serial number (can be long hex)
+    status = Column(String(20), nullable=False, default="granted")
+    created_at = Column(DateTime, default=func.now())
+
+
 class OrgSigningKey(Base):
     """One RSA-2048 key pair per organisation for digital signing."""
     __tablename__ = "org_signing_keys"
@@ -2589,6 +2608,8 @@ class ComplianceCertificate(Base):
     # Digital signature fields
     signature = Column(Text, nullable=True)                  # hex-encoded RSA signature
     signing_key_id = Column(UUID(as_uuid=True), ForeignKey("org_signing_keys.id"), nullable=True)
+    # RFC 3161 trusted timestamp
+    timestamp_token_id = Column(UUID(as_uuid=True), ForeignKey("timestamp_tokens.id"), nullable=True)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 

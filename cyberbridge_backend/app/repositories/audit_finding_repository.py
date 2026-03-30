@@ -320,14 +320,22 @@ def create_sign_off(
                     models.Framework.id == assessment.framework_id
                 ).first()
                 if framework:
+                    from app.services import digital_signature_service, timestamp_authority_service
                     payload = digital_signature_service.sign_off_payload(sign_off)
+                    # Sign
                     sig_hex, key_id = digital_signature_service.sign_payload(
                         payload, framework.organisation_id, db
                     )
                     sign_off.signature = sig_hex
                     sign_off.signing_key_id = key_id
+                    # Timestamp (non-blocking)
+                    ts_token = timestamp_authority_service.request_timestamp(
+                        payload, db, target_type="sign_off", target_id=sign_off.id
+                    )
+                    if ts_token:
+                        sign_off.timestamp_token_id = ts_token.id
     except Exception:
-        # Signing is non-blocking — sign-off is still created if signing fails
+        # Signing/timestamping is non-blocking — sign-off still created if it fails
         pass
 
     db.commit()
