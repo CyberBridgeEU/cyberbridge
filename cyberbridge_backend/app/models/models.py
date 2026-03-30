@@ -1184,6 +1184,11 @@ class AuditActivityLog(Base):
 
     created_at = Column(DateTime, default=func.now())
 
+    # Audit log chain fields
+    chain_index = Column(Integer, nullable=True)           # sequential position in this engagement's chain
+    previous_log_hash = Column(String(64), nullable=True)  # SHA256 of the previous entry
+    log_hash = Column(String(64), nullable=True)           # SHA256 of this entry's content + previous_log_hash
+
     # Relationships
     engagement = relationship("AuditEngagement", foreign_keys=[engagement_id])
     user = relationship("User", foreign_keys=[user_id])

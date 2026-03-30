@@ -332,7 +332,20 @@ def create_activity_log(
     ip_address: Optional[str] = None,
     user_agent: Optional[str] = None
 ):
-    """Create an activity log entry"""
+    """Create an activity log entry with tamper-evident hash chaining."""
+    from app.services import audit_log_chain_service
+    import json
+    from datetime import datetime, timezone
+
+    # Resolve chain position before creating the entry
+    chain_index, previous_log_hash = audit_log_chain_service.get_chain_tip(db, engagement_id)
+
+    # Serialize details to raw JSON string (same format stored in _details column)
+    details_str = json.dumps(details) if details is not None else None
+
+    # Use a fixed timestamp so the hash is stable
+    created_at = datetime.now(timezone.utc)
+
     log = models.AuditActivityLog(
         id=uuid.uuid4(),
         engagement_id=engagement_id,
@@ -343,7 +356,25 @@ def create_activity_log(
         target_id=target_id,
         details=details,
         ip_address=ip_address,
-        user_agent=user_agent
+        user_agent=user_agent,
+        created_at=created_at,
+        chain_index=chain_index,
+        previous_log_hash=previous_log_hash,
+    )
+
+    # Compute hash over the full entry content
+    log.log_hash = audit_log_chain_service.compute_log_hash(
+        chain_index=chain_index,
+        engagement_id=engagement_id,
+        user_id=user_id,
+        auditor_id=auditor_id,
+        action=action,
+        target_type=target_type,
+        target_id=target_id,
+        details=details_str,
+        ip_address=ip_address,
+        created_at=created_at,
+        previous_log_hash=previous_log_hash,
     )
 
     db.add(log)
