@@ -330,6 +330,101 @@ graph LR
     class C5173,C8000b,C5432,C8000z,C8000n,C8000o,C8000sg,C8000sy,C8000e,C8001,C8080,C11435,C8000c docker
 ```
 
+## Component Catalog
+
+```mermaid
+graph TB
+    subgraph core["CORE PLATFORM"]
+        FE["<b>FRONTEND — React SPA</b><br/>React + TypeScript + Vite + Ant Design<br/>75+ pages, 56 Zustand stores, Wouter routing<br/>Compliance dashboards, scanning UI, AI advisory<br/><i>Port: 5173</i>"]
+
+        BE["<b>BACKEND API — FastAPI</b><br/>59 route controllers, 45 services, 46 repositories<br/>Orchestrates scanners, auth (JWT/SSO/magic links),<br/>compliance workflows, risk, audit, incident mgmt<br/><i>Port: 5174 → 8000</i>"]
+
+        DB[("<b>DATABASE — PostgreSQL 16 + pgvector</b><br/>100+ tables, UUID primary keys<br/>Users, frameworks, assessments, risks, policies,<br/>scan results, evidence, audit trails<br/>pgvector for RAG semantic search<br/><i>Port: 5433 → 5432</i>")]
+    end
+
+    subgraph scanners["SECURITY SCANNERS"]
+        NM["<b>NMAP — Network Scanner</b><br/>Port/service detection, OS fingerprinting<br/>CPE-to-CVE enrichment via NVD API<br/><i>Port: 8011 → 8000</i>"]
+
+        ZP["<b>OWASP ZAP — Web App Scanner</b><br/>Spider crawling + active scanning<br/>OWASP Top 10 vulnerability detection<br/><i>Port: 8010 → 8000</i>"]
+
+        SG["<b>SEMGREP — Code Scanner (SAST)</b><br/>Static analysis on uploaded source code<br/>Security patterns, code quality rules<br/><i>Port: 8013 → 8000</i>"]
+
+        OV["<b>OSV SCANNER — Dependency Scanner</b><br/>Scans lock files for known CVEs<br/>NPM, PyPI, Go module support<br/><i>Port: 8012 → 8000</i>"]
+
+        SY["<b>SYFT — SBOM Generator</b><br/>CycloneDX Bill of Materials<br/>Components, versions, licenses inventory<br/><i>Port: 8014 → 8000</i>"]
+    end
+
+    subgraph ai["AI / ML SERVICES"]
+        LL["<b>LLAMA.CPP — LLM Engine</b><br/>Phi-4 quantized model (Q4_K_M)<br/>OpenAI-compatible API, 8192 ctx window<br/>Risk recommendations, gap analysis, advisory<br/><i>Port: 11435</i>"]
+
+        EM["<b>EMBEDDINGS — SentenceTransformers</b><br/>all-MiniLM-L6-v2 (384-dim vectors)<br/>RAG pipeline: embeds objectives and queries<br/>pgvector semantic similarity search<br/><i>Port: 8016 → 8000</i>"]
+    end
+
+    subgraph threat["THREAT INTELLIGENCE & MONITORING"]
+        CT["<b>CTI SERVICE — Threat Aggregation</b><br/>Polls all scanners on 1-hour schedule<br/>Syncs MITRE ATT&CK + CISA KEV feeds<br/>Unified threat intelligence dashboards<br/><i>Internal port: 8000</i>"]
+
+        DW["<b>DARK WEB SCANNER — Tor Search</b><br/>SOCKS5 proxy across 23 dark web engines<br/>Detects leaked credentials and data<br/>Queue-based, generates PDF reports<br/><i>Port: 8030 → 8001</i>"]
+
+        SX["<b>SEARXNG — Regulatory Monitor</b><br/>Meta-search: Google, Bing, Scholar, DDG<br/>Detects regulatory changes in CRA, NIS2,<br/>ISO 27001, GDPR, NIST, DORA<br/><i>Port: 8040 → 8080</i>"]
+    end
+
+    subgraph external["EXTERNAL FEEDS & APIs"]
+        NVD["<b>NVD API v2.0</b><br/>CVE/CVSS vulnerability lookup"]
+        EUVD["<b>EU Vulnerability DB</b><br/>EU-specific advisories"]
+        MITRE["<b>MITRE ATT&CK</b><br/>Technique/tactic mapping"]
+        CISA["<b>CISA KEV</b><br/>Known exploited vulns"]
+        TSA["<b>FreeTSA.org</b><br/>RFC 3161 timestamps"]
+        TOR["<b>Tor Network</b><br/>Dark web access"]
+        SEARCH["<b>Search Engines</b><br/>Google, Bing, DDG, Scholar"]
+    end
+
+    subgraph infra["INFRASTRUCTURE"]
+        VOL["<b>DOCKER COMPOSE STACK</b><br/>14 containers · cyberbridge-network (bridge)<br/>5 persistent volumes: postgres_data,<br/>backend_uploads, audit_attachments,<br/>backend_backups, zap_data<br/>Tiered startup with health checks"]
+    end
+
+    FE -->|"REST API + JWT"| BE
+    BE -->|"SQLAlchemy ORM"| DB
+    BE -->|"HTTP"| NM
+    BE -->|"HTTP"| ZP
+    BE -->|"HTTP"| SG
+    BE -->|"HTTP"| OV
+    BE -->|"HTTP"| SY
+    BE -->|"OpenAI API"| LL
+    BE -->|"POST /embed"| EM
+    BE -->|"HTTP proxy"| CT
+    BE -->|"HTTP proxy"| DW
+    BE -->|"Search queries"| SX
+    BE -->|"CVE lookup"| NVD
+    BE -->|"Vuln sync"| EUVD
+    BE -->|"RFC 3161"| TSA
+    CT -->|"Feed sync"| MITRE
+    CT -->|"Feed sync"| CISA
+    CT -.->|"Poll results"| NM
+    CT -.->|"Poll results"| ZP
+    CT -.->|"Poll results"| SG
+    CT -.->|"Poll results"| OV
+    CT -->|"SQLAlchemy"| DB
+    DW -->|"SQLAlchemy"| DB
+    DW -->|"SOCKS5"| TOR
+    SX -->|"Meta-search"| SEARCH
+    EM -.->|"Vector storage"| DB
+    NM -->|"CPE enrichment"| NVD
+
+    classDef coreStyle fill:#E3F2FD,stroke:#1565C0,color:#000
+    classDef scanStyle fill:#FFF3E0,stroke:#E65100,color:#000
+    classDef aiStyle fill:#F3E5F5,stroke:#6A1B9A,color:#000
+    classDef threatStyle fill:#FFEBEE,stroke:#C62828,color:#000
+    classDef extStyle fill:#ECEFF1,stroke:#546E7A,color:#000
+    classDef infraStyle fill:#E8F5E9,stroke:#2E7D32,color:#000
+
+    class FE,BE,DB coreStyle
+    class NM,ZP,SG,OV,SY scanStyle
+    class LL,EM aiStyle
+    class CT,DW,SX threatStyle
+    class NVD,EUVD,MITRE,CISA,TSA,TOR,SEARCH extStyle
+    class VOL infraStyle
+```
+
 ## Technology Stack Summary
 
 ```mermaid
