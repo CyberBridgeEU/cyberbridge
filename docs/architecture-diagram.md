@@ -151,6 +151,93 @@ graph TB
     class NVD,EUVD,MITRE,CISA,FreeTSA,TorNetwork,SearchEngines external
 ```
 
+### Description
+
+This diagram provides a complete end-to-end view of the CyberBridge platform, showing every major subsystem and how they communicate. **Users** (standard browser users and external auditors authenticated via magic links) interact with the **React + TypeScript SPA** on port 5173, which issues authenticated REST calls to the **FastAPI backend** (host port 5174 → container port 8000). The backend is organised into eight core modules — Auth/RBAC, Compliance Engine, Risk Management, Scan Orchestrator, Audit & Evidence, AI Services, Regulatory Monitor, and Incident Management — that collectively expose 59 route controllers over 45 services and 46 repositories.
+
+The backend delegates specialised work to three families of microservices on the internal Docker network: **security scanners** (Nmap, OWASP ZAP, Semgrep, OSV, Syft) for vulnerability and SBOM analysis; **AI/ML services** (llama.cpp running Phi-4 and an Embeddings service running all-MiniLM-L6-v2) for RAG-powered advisory; and **threat-intelligence services** (CTI aggregator, Tor-based Dark Web Scanner, SearXNG meta-search) for regulatory and threat monitoring. All persistent data lives in a single **PostgreSQL 16 + pgvector** instance (host 5433 → 5432) with five named volumes (`postgres_data`, `backend_uploads`, `audit_attachments`, `backend_backups`, `zap_data`). Outbound integrations include the NVD and EU Vulnerability databases, MITRE ATT&CK, CISA KEV, FreeTSA RFC 3161 timestamping, the Tor network, and public search engines. Dashed lines denote scheduled background polling (CTI pulls scanner results hourly via APScheduler; embeddings are written asynchronously to pgvector).
+
+### Compact Version
+
+```mermaid
+graph TB
+    Users["Users<br/>Browser / Auditor"]
+    FE["Frontend<br/>React SPA · :5173"]
+    BE["Backend API<br/>FastAPI · :5174"]
+
+    subgraph Scanners["Scanners"]
+        direction LR
+        NM["Nmap"]
+        ZP["ZAP"]
+        SG["Semgrep"]
+        OV["OSV"]
+        SY["Syft"]
+    end
+
+    subgraph AI["AI / ML"]
+        direction LR
+        LL["llama.cpp<br/>Phi-4"]
+        EM["Embeddings<br/>MiniLM"]
+    end
+
+    subgraph Intel["Threat Intel"]
+        direction LR
+        CT["CTI"]
+        DW["Dark Web"]
+        SX["SearXNG"]
+    end
+
+    DB[("PostgreSQL 16<br/>+ pgvector")]
+
+    subgraph Ext["External Feeds"]
+        direction LR
+        NVD["NVD"]
+        EUVD["EUVD"]
+        MITRE["MITRE"]
+        CISA["CISA KEV"]
+        TSA["FreeTSA"]
+        TOR["Tor"]
+        SE["Search Eng."]
+    end
+
+    Users --> FE --> BE
+    BE --> Scanners
+    BE --> AI
+    BE --> Intel
+    BE --> DB
+    Intel --> DB
+    AI -.-> DB
+    BE --> Ext
+    CT --> MITRE
+    CT --> CISA
+    CT -.-> Scanners
+    DW --> TOR
+    SX --> SE
+    NM --> NVD
+
+    classDef u fill:#E1F5FE,stroke:#0288D1,color:#000
+    classDef f fill:#4FC3F7,stroke:#0288D1,color:#000
+    classDef b fill:#81C784,stroke:#388E3C,color:#000
+    classDef s fill:#FFB74D,stroke:#F57C00,color:#000
+    classDef a fill:#CE93D8,stroke:#7B1FA2,color:#000
+    classDef t fill:#EF5350,stroke:#C62828,color:#fff
+    classDef d fill:#FFD54F,stroke:#F9A825,color:#000
+    classDef e fill:#B0BEC5,stroke:#546E7A,color:#000
+
+    class Users u
+    class FE f
+    class BE b
+    class NM,ZP,SG,OV,SY s
+    class LL,EM a
+    class CT,DW,SX t
+    class DB d
+    class NVD,EUVD,MITRE,CISA,TSA,TOR,SE e
+```
+
+#### Description
+
+A condensed top-to-bottom redraw of the high-level architecture that keeps every logical tier but collapses the per-node detail (port numbers, model versions, module breakdowns) to fit a narrower viewport. Users enter through the **Frontend**, which calls the **Backend API**; the backend fans out to three horizontal subgraphs — **Scanners**, **AI/ML**, and **Threat Intel** — and persists everything to a single **PostgreSQL + pgvector** instance. Outbound **External Feeds** are grouped at the bottom. Dashed arrows still represent the asynchronous flows (CTI polling, vector writes). Use this version when embedding the diagram in slides or narrow documentation panes; use the full version above when you need exact ports, module names, or volume details.
+
 ## Service Dependency & Startup Order
 
 ```mermaid
@@ -219,6 +306,12 @@ graph LR
     class CTI2,DW,SX parallel
 ```
 
+### Description
+
+This diagram shows the tiered boot sequence enforced by Docker Compose health checks so that dependent services only start once their prerequisites are healthy. **Tier 1** brings up **PostgreSQL** first, since every other stateful service needs it. **Tier 2** starts **OWASP ZAP**, which is promoted to its own tier because it has the longest initialisation time (spider/active-scan engines plus its internal API warmup) and the backend depends on it being reachable. **Tier 3** starts six services in parallel — **Embeddings**, **llama.cpp**, **Nmap**, **Semgrep**, **OSV**, and **Syft** — because they are mutually independent and only require the database. **Tier 4** starts the **Backend API** once every scanner and AI service is reachable, guaranteeing the FastAPI app never proxies to an un-ready dependency. **Tier 5** starts the **Frontend**, which only needs the API to be healthy.
+
+The **Parallel** group (**CTI Service**, **Dark Web Scanner**, **SearXNG**) is shown separately because these services only depend on the database and run independently of the main request path — they can come up alongside Tier 3 without blocking backend readiness. This layered ordering is what allows `docker-compose up -d` to come up deterministically even on slower hosts.
+
 ## Data Flow: Security Scan Pipeline
 
 ```mermaid
@@ -250,6 +343,12 @@ sequenceDiagram
     CTI->>CTI: Map to MITRE ATT&CK
 ```
 
+### Description
+
+This sequence diagram traces the full lifecycle of a security scan from the moment a user clicks "Scan" in the UI. The **Frontend** posts to the backend's `/scanners/{type}/scan` endpoint, which dispatches an HTTP request to the appropriate **Scanner Service** (Nmap, ZAP, Semgrep, OSV, or Syft) with either the target URL/host or the uploaded file. The scanner executes its underlying tool and returns normalized JSON, which the backend persists to `ScannerHistory`. For network and dependency scans the backend then enriches each finding by querying the **NVD API** for CVE details and CVSS scores, and writes the enriched results to `ScanFindings` before returning them to the user.
+
+The bottom of the diagram shows the asynchronous ingestion path: the **CTI Service** runs an APScheduler job every hour that polls each scanner for new results, stores them as normalized `CtiIndicators`, and maps them to MITRE ATT&CK techniques. This decoupling is important — scan results are immediately usable by the frontend (synchronous path), while the CTI service independently builds the long-term threat-intelligence view (asynchronous path) without blocking user-facing latency.
+
 ## Data Flow: AI-Powered Compliance Advisory
 
 ```mermaid
@@ -273,7 +372,14 @@ sequenceDiagram
     API->>DB: Cache response
     API-->>FE: AI Advisory Response
     FE-->>User: Display Recommendation
+
 ```
+
+### Description
+
+This sequence diagram documents the **Retrieval-Augmented Generation (RAG)** pipeline used by the AI Compliance Advisor. When a user submits a compliance question, the frontend posts it to `/compliance-advisor/query`. The backend first sends the raw question to the **Embeddings Service** (all-MiniLM-L6-v2), which returns a 384-dimensional query vector. The backend then runs a **pgvector cosine-similarity search** against pre-embedded framework objectives in PostgreSQL, returning the top-K most relevant objectives as context.
+
+The retrieved context is packaged with the original question into a prompt and sent to **llama.cpp** via an OpenAI-compatible `/v1/chat/completions` call. The Phi-4 model (Q4_K_M quantization, 8192-token context, 16 threads) generates a grounded recommendation that cites the retrieved objectives. The response is cached in the database and returned to the user. This architecture means every AI answer is anchored in actual framework text from the organisation's assessments, which reduces hallucinations and makes recommendations auditable — a critical property for compliance work.
 
 ## Network & Port Map
 
@@ -329,6 +435,12 @@ graph LR
     class H5173,H5174,H5433,H8010,H8011,H8012,H8013,H8014,H8016,H8030,H8040,H11435 host
     class C5173,C8000b,C5432,C8000z,C8000n,C8000o,C8000sg,C8000sy,C8000e,C8001,C8080,C11435,C8000c docker
 ```
+
+### Description
+
+This diagram maps every **host-machine port** (left column) to its corresponding **container port** on the internal `cyberbridge-network` bridge network (right column). The host ports are what a developer or operator connects to from outside the Docker stack; the container ports are what the services bind to internally. Most microservices listen on container port `8000` and are exposed on a unique host port (`8010`–`8016`, `8030`, `8040`) to avoid collisions when accessed from the host.
+
+Notable mappings: the **Frontend** is exposed on `5173`, the **Backend** on `5174`, **PostgreSQL** on `5433` (mapped from the standard `5432` to avoid clashing with a local Postgres install), **OWASP ZAP** on `8010`, **Nmap** on `8011`, **OSV** on `8012`, **Semgrep** on `8013`, **Syft** on `8014`, **Embeddings** on `8016`, **Dark Web Scanner** on `8030` (container `8001`), **SearXNG** on `8040` (container `8080`), and **llama.cpp** on `11435`. The **CTI Service** (`cti-service:8000`) is intentionally *not* exposed to the host — it is only reachable from other containers, which enforces that external clients always go through the backend API proxy rather than hitting CTI directly.
 
 ## Component Catalog
 
@@ -425,57 +537,164 @@ graph TB
     class VOL infraStyle
 ```
 
+### Description
+
+This catalog groups every component in the platform by functional role, with each box summarizing the component's responsibility, technology, and port binding. The **Core Platform** tier contains the three components that every user request flows through: the **Frontend** React SPA, the **Backend** FastAPI application, and the **PostgreSQL + pgvector** database. The **Security Scanners** tier contains the five scanning microservices, each specialised for a different attack surface — Nmap for network reconnaissance, ZAP for dynamic web-app testing, Semgrep for static code analysis, OSV for dependency vulnerabilities, and Syft for SBOM generation.
+
+The **AI/ML Services** tier captures the two AI components: **llama.cpp** (Phi-4 inference) and the **Embeddings** service (SentenceTransformers). The **Threat Intelligence & Monitoring** tier groups the three services that operate on longer time horizons — the **CTI Service** (aggregates scanner output and external feeds), the **Dark Web Scanner** (Tor-based leaked-credential search), and **SearXNG** (regulatory change detection). The **External Feeds & APIs** tier lists the seven third-party data sources the platform integrates with. The **Infrastructure** tier summarizes the Docker Compose orchestration: 14 containers, one bridge network, five persistent volumes, and health-checked tiered startup. The arrows show the request/data direction between components, with dashed lines indicating asynchronous or scheduled flows (CTI polling, vector storage).
+
+### Compact Version
+
+```mermaid
+graph TB
+    subgraph core["Core"]
+        direction LR
+        FE["Frontend<br/>React SPA"]
+        BE["Backend<br/>FastAPI"]
+        DB[("PostgreSQL<br/>+ pgvector")]
+    end
+
+    subgraph scanners["Scanners"]
+        direction LR
+        NM["Nmap"]
+        ZP["ZAP"]
+        SG["Semgrep"]
+        OV["OSV"]
+        SY["Syft"]
+    end
+
+    subgraph ai["AI / ML"]
+        direction LR
+        LL["llama.cpp<br/>Phi-4"]
+        EM["Embeddings<br/>MiniLM"]
+    end
+
+    subgraph threat["Threat Intel"]
+        direction LR
+        CT["CTI"]
+        DW["Dark Web"]
+        SX["SearXNG"]
+    end
+
+    subgraph external["External"]
+        direction LR
+        NVD["NVD"]
+        EUVD["EUVD"]
+        MITRE["MITRE"]
+        CISA["CISA KEV"]
+        TSA["FreeTSA"]
+        TOR["Tor"]
+        SE["Search Eng."]
+    end
+
+    INF["Docker Compose · 14 containers · 5 volumes"]
+
+    FE --> BE
+    BE --> DB
+    BE --> scanners
+    BE --> ai
+    BE --> threat
+    BE --> external
+    CT --> MITRE
+    CT --> CISA
+    CT -.-> scanners
+    CT --> DB
+    DW --> TOR
+    DW --> DB
+    SX --> SE
+    EM -.-> DB
+    NM --> NVD
+    core -.- INF
+
+    classDef c fill:#E3F2FD,stroke:#1565C0,color:#000
+    classDef s fill:#FFF3E0,stroke:#E65100,color:#000
+    classDef a fill:#F3E5F5,stroke:#6A1B9A,color:#000
+    classDef t fill:#FFEBEE,stroke:#C62828,color:#000
+    classDef e fill:#ECEFF1,stroke:#546E7A,color:#000
+    classDef i fill:#E8F5E9,stroke:#2E7D32,color:#000
+
+    class FE,BE,DB c
+    class NM,ZP,SG,OV,SY s
+    class LL,EM a
+    class CT,DW,SX t
+    class NVD,EUVD,MITRE,CISA,TSA,TOR,SE e
+    class INF i
+```
+
+#### Description
+
+A condensed variant of the component catalog that preserves the six functional tiers (**Core**, **Scanners**, **AI/ML**, **Threat Intel**, **External**, **Infrastructure**) but strips each node down to its name and one identifying detail so the layout fits a narrow column. The arrow topology is unchanged — the backend still fans out to scanners, AI, threat-intel, and external feeds, with dashed lines for asynchronous flows (CTI polling scanners, embeddings writing vectors to pgvector) — but all per-component metadata (port mappings, framework coverage, engine counts, model sizes) has been delegated to the full version above. Use this for overview slides or READMEs; use the full catalog when operators need to reason about exact ports or capabilities.
+
 ## Technology Stack Summary
 
 ```mermaid
+%%{init: {'theme':'base', 'themeVariables': {
+  'fontFamily':'Helvetica, Arial, sans-serif',
+  'primaryColor':'#1565C0',
+  'primaryTextColor':'#FFFFFF',
+  'primaryBorderColor':'#0D47A1',
+  'lineColor':'#455A64',
+  'cScale0':'#1565C0','cScale1':'#E65100','cScale2':'#6A1B9A','cScale3':'#C62828',
+  'cScale4':'#2E7D32','cScale5':'#00838F','cScale6':'#4E342E','cScale7':'#AD1457',
+  'cScale8':'#283593','cScale9':'#FF8F00',
+  'cScaleLabel0':'#FFFFFF','cScaleLabel1':'#FFFFFF','cScaleLabel2':'#FFFFFF','cScaleLabel3':'#FFFFFF',
+  'cScaleLabel4':'#FFFFFF','cScaleLabel5':'#FFFFFF','cScaleLabel6':'#FFFFFF','cScaleLabel7':'#FFFFFF',
+  'cScaleLabel8':'#FFFFFF','cScaleLabel9':'#FFFFFF'
+}}}%%
 mindmap
   root((CyberBridge))
-    Frontend
-      React + TypeScript
-      Vite Build Tool
-      Ant Design UI
-      Zustand State
-      Wouter Routing
-      PDF Export (jsPDF)
-    Backend
-      FastAPI
-      SQLAlchemy ORM
-      Pydantic DTOs
-      APScheduler
-      JWT Auth + SSO
-      SMTP Email
-    Database
-      PostgreSQL 16
-      pgvector Extension
-      UUID Primary Keys
-      100+ Tables
-    Security Scanners
-      OWASP ZAP
-      Nmap
-      Semgrep (SAST)
-      OSV Scanner
-      Syft (SBOM)
-    AI / ML
-      llama.cpp + Phi-4
-      SentenceTransformers
-      RAG Pipeline
-      pgvector Search
-    Threat Intel
-      MITRE ATT&CK
-      CISA KEV
-      NVD API v2
-      EUVD Sync
-    Dark Web
-      Tor Network
-      23 Search Engines
-      PDF Reports
-    Regulatory
-      SearXNG Meta-Search
-      Framework Monitoring
-      Change Detection
-    Infrastructure
-      Docker Compose
-      Bridge Network
-      5 Persistent Volumes
-      Health Checks
+    [Frontend]
+      [React + TypeScript]
+      [Vite Build Tool]
+      [Ant Design UI]
+      [Zustand State]
+      [Wouter Routing]
+      [PDF Export jsPDF]
+    [Backend]
+      [FastAPI]
+      [SQLAlchemy ORM]
+      [Pydantic DTOs]
+      [APScheduler]
+      [JWT Auth + SSO]
+      [SMTP Email]
+    [Database]
+      [PostgreSQL 16]
+      [pgvector Extension]
+      [UUID Primary Keys]
+      [100+ Tables]
+    [Security Scanners]
+      [OWASP ZAP]
+      [Nmap]
+      [Semgrep SAST]
+      [OSV Scanner]
+      [Syft SBOM]
+    [AI / ML]
+      [llama.cpp + Phi-4]
+      [SentenceTransformers]
+      [RAG Pipeline]
+      [pgvector Search]
+    [Threat Intel]
+      [MITRE ATT&CK]
+      [CISA KEV]
+      [NVD API v2]
+      [EUVD Sync]
+    [Dark Web]
+      [Tor Network]
+      [23 Search Engines]
+      [PDF Reports]
+    [Regulatory]
+      [SearXNG Meta-Search]
+      [Framework Monitoring]
+      [Change Detection]
+    [Infrastructure]
+      [Docker Compose]
+      [Bridge Network]
+      [5 Persistent Volumes]
+      [Health Checks]
 ```
+
+### Description
+
+This mindmap provides a bird's-eye inventory of the entire technology stack, organised by architectural layer. The **Frontend** layer lists the React/TypeScript toolchain (Vite, Ant Design, Zustand, Wouter, jsPDF). The **Backend** layer lists the FastAPI stack and its cross-cutting capabilities — SQLAlchemy ORM, Pydantic DTOs, APScheduler for background jobs, JWT and SSO authentication, and SMTP email delivery. The **Database** layer calls out PostgreSQL 16, the pgvector extension for RAG, UUID primary keys, and the 100+ table schema footprint.
+
+The remaining branches enumerate the specialised subsystems: five **Security Scanners** (ZAP, Nmap, Semgrep, OSV, Syft), the **AI/ML** pipeline (llama.cpp + Phi-4, SentenceTransformers, RAG, pgvector search), the **Threat Intelligence** feeds (MITRE ATT&CK, CISA KEV, NVD v2, EUVD), the **Dark Web** stack (Tor, 23 search engines, PDF reports), the **Regulatory** monitoring stack (SearXNG, framework monitoring, change detection), and the **Infrastructure** foundation (Docker Compose, bridge networking, 5 persistent volumes, health checks). Unlike the other diagrams, this one is intentionally non-relational — it answers "what technologies are involved?" rather than "how do they connect?" and is intended as a quick onboarding reference for new engineers.
