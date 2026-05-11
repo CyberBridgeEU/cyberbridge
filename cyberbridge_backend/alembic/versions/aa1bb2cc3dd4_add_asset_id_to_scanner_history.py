@@ -1,7 +1,7 @@
 """Add asset_id to scanner_history
 
 Revision ID: aa1bb2cc3dd4
-Revises: y4z5a6b7c8d9
+Revises: a1b2c3d4e5f6
 Create Date: 2026-02-19 14:00:00.000000
 
 """
@@ -14,7 +14,7 @@ from sqlalchemy.dialects.postgresql import UUID
 
 # revision identifiers, used by Alembic.
 revision: str = 'aa1bb2cc3dd4'
-down_revision: Union[str, None] = 'y4z5a6b7c8d9'
+down_revision: Union[str, None] = 'a1b2c3d4e5f6'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

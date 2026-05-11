@@ -1,6 +1,6 @@
 """add_regulatory_monitor_tables
 
-Revision ID: a1b2c3d4e5f6
+Revision ID: a1b2c3d4e5f7
 Revises: jj0kk1ll2mm3
 Create Date: 2026-03-24 14:00:00.000000
 
@@ -14,7 +14,7 @@ from sqlalchemy.dialects.postgresql import UUID
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'a1b2c3d4e5f6'
+revision: str = 'a1b2c3d4e5f7'
 down_revision: Union[str, None] = 'jj0kk1ll2mm3'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
