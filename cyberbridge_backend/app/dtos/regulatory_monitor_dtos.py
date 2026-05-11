@@ -145,6 +145,25 @@ class NotificationResponse(BaseModel):
     pending_changes: dict = {}
 
 
+# ==================== Unanalyzed Results ====================
+
+class UnanalyzedFinding(BaseModel):
+    id: uuid.UUID
+    source_name: str
+    source_url: Optional[str] = None
+    fetched_at: Optional[datetime] = None
+    content_preview: Optional[str] = None
+
+
+class UnanalyzedGroupResponse(BaseModel):
+    scan_run_id: uuid.UUID
+    scan_started_at: Optional[datetime] = None
+    scan_completed_at: Optional[datetime] = None
+    framework_type: str
+    finding_count: int
+    findings: List[UnanalyzedFinding] = []
+
+
 # ==================== Snapshots ====================
 
 class SnapshotResponse(BaseModel):

@@ -2598,6 +2598,21 @@ class RegulatoryChange(Base):
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
 
+class RegulatoryAnalysisRun(Base):
+    # Marker row written when an LLM analysis completes for a (scan_run_id, framework_type)
+    # pair, even when zero changes were produced. Lets the UI tell apart "not yet analyzed"
+    # from "analyzed and the LLM found nothing".
+    __tablename__ = "regulatory_analysis_runs"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    scan_run_id = Column(UUID(as_uuid=True), ForeignKey("regulatory_scan_runs.id"), nullable=False)
+    framework_type = Column(String(100), nullable=False)
+    changes_found = Column(Integer, nullable=False, default=0)
+    triggered_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    analyzed_at = Column(DateTime, default=func.now())
+    created_at = Column(DateTime, default=func.now())
+
+
 class LegalHold(Base):
     """
     A legal hold prevents deletion or modification of a target record.

@@ -197,10 +197,12 @@ async def trigger_llm_analysis(
     if not run:
         raise HTTPException(status_code=404, detail="Scan run not found")
 
+    triggered_by = uuid.UUID(current_user.id) if isinstance(current_user.id, str) else current_user.id
+
     if body and body.llm_response:
         # Parse and store pre-computed LLM response
         changes = RegulatoryMonitorService.store_llm_changes(
-            db, scan_run_id, framework_type, body.llm_response
+            db, scan_run_id, framework_type, body.llm_response, triggered_by=triggered_by
         )
         db.commit()
         return {"status": "completed", "changes_count": len(changes), "changes": changes}
@@ -218,7 +220,7 @@ async def trigger_llm_analysis(
 
             # Parse the LLM response and store changes
             changes = RegulatoryMonitorService.store_llm_changes(
-                db, scan_run_id, framework_type, llm_response
+                db, scan_run_id, framework_type, llm_response, triggered_by=triggered_by
             )
             db.commit()
             return {"status": "completed", "changes_count": len(changes), "changes": changes}
@@ -284,6 +286,18 @@ def review_change(
 
     db.commit()
     return {"id": str(change.id), "status": change.status}
+
+
+# ==================== Unanalyzed Results ====================
+
+@router.get("/unanalyzed-results", response_model=List[dtos.UnanalyzedGroupResponse])
+def get_unanalyzed_results(
+    db: Session = Depends(get_db),
+    current_user: schemas.UserBase = Depends(get_current_active_user)
+):
+    """List every (scan_run, framework) pair that has scan_results but no LLM analysis yet."""
+    _require_admin(current_user)
+    return repo.get_unanalyzed_groups(db)
 
 
 # ==================== Notifications ====================

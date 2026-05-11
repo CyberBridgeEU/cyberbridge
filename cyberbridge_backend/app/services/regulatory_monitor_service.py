@@ -287,7 +287,8 @@ Be conservative — only flag genuine regulatory changes, not formatting differe
         db: Session,
         scan_run_id: uuid.UUID,
         framework_type: str,
-        llm_response: str
+        llm_response: str,
+        triggered_by: Optional[uuid.UUID] = None,
     ) -> List[Dict]:
         """Parse LLM response and store changes. Called by the controller after LLM completes."""
         changes = RegulatoryMonitorService._parse_llm_changes(llm_response)
@@ -314,6 +315,15 @@ Be conservative — only flag genuine regulatory changes, not formatting differe
                 "confidence": stored.confidence,
                 "status": stored.status
             })
+
+        # Marker row so the "unanalyzed" view excludes this pair even when no changes were produced.
+        repo.create_analysis_run(
+            db,
+            scan_run_id=scan_run_id,
+            framework_type=framework_type,
+            changes_found=len(stored_changes),
+            triggered_by=triggered_by,
+        )
 
         db.flush()
         return stored_changes

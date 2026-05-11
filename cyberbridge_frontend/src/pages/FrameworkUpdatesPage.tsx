@@ -9,6 +9,7 @@ import InfoTitle from "../components/InfoTitle.tsx";
 import FrameworkUpdatesSection from "../components/FrameworkUpdatesSection.tsx";
 import RegulatoryChangesSection from "../components/RegulatoryChangesSection.tsx";
 import SnapshotTimeline from "../components/SnapshotTimeline.tsx";
+import UnanalyzedScanResultsSection from "../components/UnanalyzedScanResultsSection.tsx";
 import { useLocation } from 'wouter';
 import { useMenuHighlighting } from "../utils/menuUtils.ts";
 
@@ -206,6 +207,13 @@ const FrameworkUpdatesPage: React.FC = () => {
                                 }
                                 style={{ marginBottom: 0 }}
                             />
+                        </div>
+                    )}
+
+                    {/* Unanalyzed Scan Findings (admin only) */}
+                    {isAdmin && (
+                        <div className="page-section">
+                            <UnanalyzedScanResultsSection />
                         </div>
                     )}
 

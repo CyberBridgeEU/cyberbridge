@@ -47,6 +47,23 @@ interface Snapshot {
     created_at: string | null;
 }
 
+interface UnanalyzedFinding {
+    id: string;
+    source_name: string;
+    source_url: string | null;
+    fetched_at: string | null;
+    content_preview: string | null;
+}
+
+interface UnanalyzedGroup {
+    scan_run_id: string;
+    scan_started_at: string | null;
+    scan_completed_at: string | null;
+    framework_type: string;
+    finding_count: number;
+    findings: UnanalyzedFinding[];
+}
+
 interface LLMAnalysisResult {
     status: string;
     prompt?: string;
@@ -66,6 +83,7 @@ interface RegulatoryMonitorStore {
     changes: RegulatoryChange[];
     scanRuns: ScanRun[];
     snapshots: Snapshot[];
+    unanalyzedGroups: UnanalyzedGroup[];
     llmResult: LLMAnalysisResult | null;
     loading: boolean;
     analyzing: boolean;
@@ -75,6 +93,7 @@ interface RegulatoryMonitorStore {
     fetchNotifications: () => Promise<void>;
     fetchChanges: (frameworkType?: string, status?: string) => Promise<void>;
     fetchScanRuns: () => Promise<void>;
+    fetchUnanalyzedResults: () => Promise<void>;
     fetchSnapshots: (frameworkId: string) => Promise<void>;
     triggerLLMAnalysis: (scanRunId: string, frameworkType: string, llmResponse?: string) => Promise<LLMAnalysisResult | null>;
     reviewChange: (changeId: string, status: 'approved' | 'rejected') => Promise<boolean>;
@@ -93,6 +112,7 @@ const useRegulatoryMonitorStore = create<RegulatoryMonitorStore>((set) => ({
     changes: [],
     scanRuns: [],
     snapshots: [],
+    unanalyzedGroups: [],
     llmResult: null,
     loading: false,
     analyzing: false,
@@ -147,6 +167,21 @@ const useRegulatoryMonitorStore = create<RegulatoryMonitorStore>((set) => ({
             }
         } catch (error) {
             set({ loading: false });
+        }
+    },
+
+    fetchUnanalyzedResults: async () => {
+        try {
+            const response = await fetch(
+                `${cyberbridge_back_end_rest_api}/regulatory-monitor/unanalyzed-results`,
+                { headers: { ...useAuthStore.getState().getAuthHeader() } }
+            );
+            if (response.ok) {
+                const data = await response.json();
+                set({ unanalyzedGroups: data });
+            }
+        } catch (error) {
+            console.error('Failed to fetch unanalyzed scan results:', error);
         }
     },
 

@@ -7,7 +7,7 @@ from sqlalchemy import desc
 
 from ..models.models import (
     RegulatorySource, RegulatoryMonitorSettings, RegulatoryScanRun,
-    RegulatoryScanResult, RegulatoryChange
+    RegulatoryScanResult, RegulatoryChange, RegulatoryAnalysisRun
 )
 
 logger = logging.getLogger(__name__)
@@ -231,6 +231,83 @@ def get_pending_changes_count_by_framework(db: Session) -> dict:
 
     return counts
 
+
+# ==================== Analysis Runs ====================
+
+def create_analysis_run(
+    db: Session,
+    scan_run_id: uuid.UUID,
+    framework_type: str,
+    changes_found: int,
+    triggered_by: Optional[uuid.UUID] = None,
+) -> RegulatoryAnalysisRun:
+    run = RegulatoryAnalysisRun(
+        id=uuid.uuid4(),
+        scan_run_id=scan_run_id,
+        framework_type=framework_type,
+        changes_found=changes_found,
+        triggered_by=triggered_by,
+        analyzed_at=datetime.utcnow(),
+        created_at=datetime.utcnow(),
+    )
+    db.add(run)
+    db.flush()
+    return run
+
+
+def get_unanalyzed_groups(db: Session) -> List[dict]:
+    """
+    Return one entry per (scan_run_id, framework_type) pair that has scan_results
+    but no corresponding row in regulatory_analysis_runs.
+    """
+    # Build the set of analyzed pairs.
+    analyzed_pairs = {
+        (row.scan_run_id, row.framework_type)
+        for row in db.query(
+            RegulatoryAnalysisRun.scan_run_id,
+            RegulatoryAnalysisRun.framework_type,
+        ).all()
+    }
+
+    # Pull all scan_result rows joined with their scan_run for timestamps.
+    rows = (
+        db.query(RegulatoryScanResult, RegulatoryScanRun)
+        .join(RegulatoryScanRun, RegulatoryScanResult.scan_run_id == RegulatoryScanRun.id)
+        .order_by(desc(RegulatoryScanRun.started_at), RegulatoryScanResult.fetched_at)
+        .all()
+    )
+
+    grouped: dict = {}
+    for result, run in rows:
+        key = (result.scan_run_id, result.framework_type)
+        if key in analyzed_pairs:
+            continue
+        group = grouped.setdefault(key, {
+            "scan_run_id": result.scan_run_id,
+            "scan_started_at": run.started_at,
+            "scan_completed_at": run.completed_at,
+            "framework_type": result.framework_type,
+            "findings": [],
+        })
+        preview = (result.raw_content[:200] + "…") if result.raw_content and len(result.raw_content) > 200 else result.raw_content
+        group["findings"].append({
+            "id": result.id,
+            "source_name": result.source_name,
+            "source_url": result.source_url,
+            "fetched_at": result.fetched_at,
+            "content_preview": preview,
+        })
+
+    out = []
+    for group in grouped.values():
+        group["finding_count"] = len(group["findings"])
+        out.append(group)
+    # Newest scan first.
+    out.sort(key=lambda g: g["scan_started_at"] or datetime.min, reverse=True)
+    return out
+
+
+# ==================== Notifications helpers ====================
 
 def get_new_findings_by_framework(db: Session) -> dict:
     """Get frameworks with new scan results from the latest completed run."""
